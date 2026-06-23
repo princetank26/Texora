@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TextileTrade - The Marketplace for Textile Manufacturers & Traders</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#eff6ff',
+                            100: '#dbeafe',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            900: '#1e3a8a',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom scrollbar for a cleaner look */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
+        }
+        
+        .nav-active {
+            background-color: #eff6ff;
+            color: #2563eb;
+            border-right: 3px solid #2563eb;
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans h-screen overflow-hidden flex">
+
+    <!-- SETUP WIZARD OVERLAY -->
+    <div id="setupWizard" class="fixed inset-0 bg-gray-900/80 z-50 flex items-center justify-center backdrop-blur-sm hidden">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="bg-brand-600 text-white p-6">
+                <h2 class="text-2xl font-bold flex items-center gap-2">
+                    <i class="ph ph-intersect"></i> Welcome to TextileTrade
+                </h2>
+                <p class="text-brand-100 mt-1">Let's get your business profile set up.</p>
+            </div>
+            
+            <div class="p-6 overflow-y-auto flex-1" id="wizardSteps">
+                <!-- Step 1: Profile -->
+                <div id="step1" class="space-y-4">
+                    <h3 class="text-lg font-semibold border-b pb-2">Step 1: Your Details</h3>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                            <input type="text" id="setupName" class="w-full border rounded-lg p-2.5 focus:ring-2 focus:ring-brand-500 outline-none" placeholder="John Doe">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Business Name</label>
+                            <input type="text" id="setupBusiness" class="w-full border rounded-lg p-2.5 focus:ring-2 focus:ring-brand-500 outline-none" placeholder="Doe Textiles Ltd.">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Location (City, Country)</label>
+                            <input type="text" id="setupLocation" class="w-full border rounded-lg p-2.5 focus:ring-2 focus:ring-brand-500 outline-none" placeholder="Surat, India">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Business Type</label>
+                            <select id="setupType" class="w-full border rounded-lg p-2.5 focus:ring-2 focus:ring-brand-500 outline-none">
+                                <option>Manufacturer</option>
+                                <option>Trader / Wholesaler</option>
+                                <option>Retailer</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="flex justify-end pt-4">
+                        <button onclick="nextStep()" class="bg-brand-600 text-white px-6 py-2 rounded-lg hover:bg-brand-700 transition">Next Step <i class="ph ph-arrow-right inline-block align-middle ml-1"></i></button>
+                    </div>
+                </div>
+
+                <!-- Step 2: First Product -->
+                <div id="step2" class="space-y-4 hidden">
+                    <h3 class="text-lg font-semibold border-b pb-2">Step 2: Add Your First Product Listing</h3>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Product Title</label>
+                        <input type="text" id="setupProdTitle" class="w-full border rounded-lg p-2.5 focus:ring-2 focus:ring-brand-500 outline-none" placeholder="e.g. Premium Cotton Yarn 40s">
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Price (per kg/meter)</label>
+                            <div class="flex">
+                                <span class="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 sm:text-sm">₹</span>
+                                <input type="number" id="setupProdPrice" class="flex-1 block w-full rounded-none rounded-r-lg border border-gray-300 p-2.5 focus:ring-brand-500 focus:border-brand-500 outline-none" placeholder="150">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                            <select id="setupProdCat" class="w-full border rounded-lg p-2.5 focus:ring-2 focus:ring-brand-500 outline-none">
+                                <option>Yarn</option>
+                                <option>Raw Fabric</option>
+                                <option>Finished Garments</option>
+                                <option>Machinery</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                        <textarea id="setupProdDesc" rows="3" class="w-full border rounded-lg p-2.5 focus:ring-2 focus:ring-brand-500 outline-none" placeholder="Briefly describe the quality, origin, and minimum order quantity..."></textarea>
+                    </div>
+                    <div class="flex justify-between pt-4">
+                        <button onclick="prevStep()" class="text-gray-600 hover:text-gray-900 px-4 py-2 font-medium">Back</button>
+                        <button onclick="completeSetup()" class="bg-brand-600 text-white px-6 py-2 rounded-lg hover:bg-brand-700 transition">Complete Setup <i class="ph ph-check-circle inline-block align-middle ml-1"></i></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- LEFT SIDEBAR NAVIGATION -->
+    <aside class="w-64 bg-white border-r border-gray-200 flex flex-col z-10 flex-shrink-0">
+        <!-- Logo -->
+        <div class="h-16 flex items-center px-6 border-b border-gray-200">
+            <div class="flex items-center gap-2 text-brand-600 font-bold text-xl">
+                <i class="ph-fill ph-intersect text-2xl"></i>
+                TextileTrade
+            </div>
+        </div>
+
+        <!-- Navigation Links -->
+        <nav class="flex-1 overflow-y-auto py-4 px-3 space-y-1">
+            <button onclick="navigate('marketplace')" id="nav-marketplace" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-gray-50 hover:text-brand-600 font-medium transition text-left nav-active">
+                <i class="ph ph-storefront text-xl"></i>
+                Marketplace
+            </button>
+            <button onclick="navigate('products')" id="nav-products" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-gray-50 hover:text-brand-600 font-medium transition text-left">
+                <i class="ph ph-package text-xl"></i>
+                My Products
+            </button>
+            <button onclick="navigate('chat')" id="nav-chat" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-gray-50 hover:text-brand-600 font-medium transition text-left relative">
+                <i class="ph ph-chats text-xl"></i>
+                Chat
+                <span class="absolute right-3 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">2</span>
+            </button>
+            <button onclick="navigate('account')" id="nav-account" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-gray-50 hover:text-brand-600 font-medium transition text-left">
+                <i class="ph ph-user-circle text-xl"></i>
+                Account
+            </button>
+            
+            <div class="pt-8 pb-2 px-3">
+                <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">System</p>
+            </div>
+            <button onclick="navigate('about')" id="nav-about" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-gray-50 hover:text-brand-600 font-medium transition text-left">
+                <i class="ph ph-info text-xl"></i>
+                About App
+            </button>
+        </nav>
+
+        <!-- Sidebar Footer -->
+        <div class="p-4 border-t border-gray-200">
+            <button onclick="resetApp()" class="flex items-center gap-2 text-sm text-red-500 hover:text-red-700 transition">
+                <i class="ph ph-sign-out"></i> Reset Data
+            </button>
+        </div>
+    </aside>
+
+    <!-- MAIN CONTENT COLUMN -->
+    <main class="flex-1 flex flex-col min-w-0">
+        
+        <!-- TOP HEADER PANEL -->
+        <header class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 flex-shrink-0 z-10">
+            <!-- Search Bar -->
+            <div class="flex-1 max-w-lg">
+                <div class="relative">
+                    <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg"></i>
+                    <input type="text" id="globalSearch" placeholder="Search for textiles, machinery, or traders..." class="w-full bg-gray-100 border-transparent focus:bg-white focus:border-brand-500 focus:ring-2 focus:ring-brand-200 rounded-lg pl-10 pr-4 py-2 text-sm transition outline-none">
+                </div>
+            </div>
+
+            <!-- Header Actions -->
+            <div class="flex items-center gap-6 ml-4">
+                <!-- Location -->
+                <div class="flex items-center gap-2 text-sm text-gray-600">
+                    <i class="ph-fill ph-map-pin text-brand-500"></i>
+                    <span id="headerLocation">Surat, India</span>
+                </div>
+                
+                <div class="w-px h-6 bg-gray-200"></div>
+                
+                <!-- Account Profile -->
+                <div class="flex items-center gap-3 cursor-pointer" onclick="navigate('account')">
+                    <div class="text-right hidden md:block">
+                        <p class="text-sm font-semibold text-gray-800 leading-tight" id="headerName">John Doe</p>
+                        <p class="text-xs text-gray-500" id="headerBusiness">Doe Textiles</p>
+                    </div>
+                    <div class="h-9 w-9 rounded-full bg-brand-100 text-brand-600 flex items-center justify-center font-bold border border-brand-200">
+                        <span id="headerInitial">J</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- DYNAMIC VIEWS -->
+        <div class="flex-1 overflow-hidden relative bg-gray-50">
+            
+            <!-- 1. MARKETPLACE VIEW -->
+            <div id="view-marketplace" class="absolute inset-0 overflow-y-auto p-6 fade-in block">
+                <div class="max-w-6xl mx-auto">
+                    <!-- Top Bar -->
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                        <div>
+                            <h1 class="text-2xl font-bold text-gray-900">Global Marketplace</h1>
+                            <p class="text-gray-500 text-sm mt-1">Discover textile products from manufacturers and traders.</p>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <span class="text-sm text-gray-500 font-medium">Sort By:</span>
+                            <select id="marketSort" onchange="renderMarketplace()" class="bg-white border border-gray-300 text-gray-700 text-sm rounded-lg focus:ring-brand-500 focus:border-brand-500 block p-2 outline-none cursor-pointer">
+                                <option value="distance">Distance (Nearest First)</option>
+                                <option value="price-low">Price (Lowest First)</option>
+                                <option value="price-high">Price (Highest First)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Products Grid -->
+                    <div id="marketplaceGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. MY PRODUCTS VIEW -->
+            <div id="view-products" class="absolute inset-0 overflow-y-auto p-6 fade-in hidden">
+                <div class="max-w-6xl mx-auto">
+                    <div class="flex items-center justify-between mb-6">
+                        <div>
+                            <h1 class="text-2xl font-bold text-gray-900">My Product Listings</h1>
+                            <p class="text-gray-500 text-sm mt-1">Manage the products you are selling.</p>
+                        </div>
+                        <button class="bg-brand-600 text-white px-4 py-2 rounded-lg hover:bg-brand-700 transition flex items-center gap-2 text-sm font-medium">
+                            <i class="ph ph-plus-bold"></i> Add New Product
+                        </button>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
+                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="myProductsTable" class="bg-white divide-y divide-gray-200">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. CHAT VIEW -->
+            <div id="view-chat" class="absolute inset-0 overflow-hidden fade-in hidden">
+                <div class="h-full flex bg-white m-4 rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <!-- Chat Sidebar -->
+                    <div class="w-1/3 border-r border-gray-200 flex flex-col bg-gray-50">
+                        <div class="p-4 border-b border-gray-200 bg-white">
+                            <h2 class="text-lg font-bold text-gray-800">Messages</h2>
+                            <div class="mt-3 relative">
+                                <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                                <input type="text" placeholder="Search chats..." class="w-full bg-gray-100 border-transparent rounded-lg pl-9 pr-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-brand-500">
+                            </div>
+                        </div>
+                        <div class="flex-1 overflow-y-auto" id="chatContacts">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+                    
+                    <!-- Chat Area -->
+                    <div class="flex-1 flex flex-col bg-white">
+                        <!-- Chat Header -->
+                        <div class="p-4 border-b border-gray-200 flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <div class="h-10 w-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold">
+                                    AP
+                                </div>
+                                <div>
+                                    <h3 class="font-bold text-gray-900 text-sm" id="activeChatName">Aditya Patel</h3>
+                                    <p class="text-xs text-green-500 font-medium">Online</p>
+                                </div>
+                            </div>
+                            <button class="text-gray-400 hover:text-gray-600"><i class="ph ph-dots-three-outline-vertical text-xl"></i></button>
+                        </div>
+                        
+                        <!-- Chat Messages -->
+                        <div class="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50/50" id="chatMessages">
+                            <!-- Populated by JS -->
+                        </div>
+                        
+                        <!-- Chat Input -->
+                        <div class="p-4 border-t border-gray-200 bg-white">
+                            <div class="flex items-center gap-2">
+                                <button class="text-gray-400 hover:text-brand-600 p-2"><i class="ph ph-paperclip text-xl"></i></button>
+                                <input type="text" id="chatInputMessage" placeholder="Type your message..." class="flex-1 border border-gray-300 rounded-full px-4 py-2 text-sm outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500" onkeypress="handleChatEnter(event)">
+                                <button onclick="sendChatMessage()" class="bg-brand-600 text-white h-10 w-10 rounded-full flex items-center justify-center hover:bg-brand-700 transition">
+                                    <i class="ph-fill ph-paper-plane-right"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. ACCOUNT VIEW -->
+            <div id="view-account" class="absolute inset-0 overflow-y-auto p-6 fade-in hidden">
+                <div class="max-w-3xl mx-auto">
+                    <h1 class="text-2xl font-bold text-gray-900 mb-6">Account Settings</h1>
+                    
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                        <div class="p-6 border-b border-gray-200 flex items-center gap-6">
+                            <div class="h-20 w-20 rounded-full bg-brand-100 text-brand-600 flex items-center justify-center font-bold text-3xl border-2 border-brand-200" id="accountInitial">
+                                J
+                            </div>
+                            <div>
+                                <h2 class="text-xl font-bold text-gray-900" id="accountNameTitle">John Doe</h2>
+                                <p class="text-gray-500" id="accountBusinessTitle">Doe Textiles Ltd.</p>
+                                <button class="mt-2 text-sm text-brand-600 font-medium hover:underline">Change Avatar</button>
+                            </div>
+                        </div>
+                        
+                        <div class="p-6 space-y-6">
+                            <div class="grid grid-cols-2 gap-6">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                                    <input type="text" id="accName" class="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-brand-500 outline-none">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Business Name</label>
+                                    <input type="text" id="accBusiness" class="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-brand-500 outline-none">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                                    <input type="text" id="accLocation" class="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-brand-500 outline-none">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Business Type</label>
+                                    <select id="accType" class="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-brand-500 outline-none">
+                                        <option>Manufacturer</option>
+                                        <option>Trader / Wholesaler</option>
+                                        <option>Retailer</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="pt-4 flex justify-end">
+                                <button onclick="saveProfile()" class="bg-brand-600 text-white px-6 py-2 rounded-lg hover:bg-brand-700 transition font-medium">Save Changes</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 5. ABOUT VIEW -->
+            <div id="view-about" class="absolute inset-0 overflow-y-auto p-6 fade-in hidden">
+                <div class="max-w-2xl mx-auto bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center mt-10">
+                    <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-brand-100 text-brand-600 mb-4">
+                        <i class="ph-fill ph-code text-3xl"></i>
+                    </div>
+                    <h1 class="text-3xl font-bold text-gray-900 mb-2">TextileTrade</h1>
+                    <p class="text-gray-500 mb-8">Version 1.0.0 Prototype</p>
+                    
+                    <div class="text-left bg-gray-50 p-6 rounded-lg border border-gray-100">
+                        <h3 class="font-bold text-gray-800 mb-3 text-lg">About the Developer</h3>
+                        <p class="text-gray-600 mb-4">
+                            This platform was developed as a concept application for a specialized marketplace connecting textile manufacturers and traders. 
+                        </p>
+                        <ul class="space-y-2 text-sm text-gray-600">
+                            <li class="flex items-center gap-2"><i class="ph-fill ph-check-circle text-green-500"></i> Pure HTML, CSS (Tailwind), and Vanilla JavaScript</li>
+                            <li class="flex items-center gap-2"><i class="ph-fill ph-check-circle text-green-500"></i> Responsive Single Page Application architecture</li>
+                            <li class="flex items-center gap-2"><i class="ph-fill ph-check-circle text-green-500"></i> Local Storage for data persistence simulation</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="mt-8 text-sm text-gray-400">
+                        &copy; 2026 TextileTrade App. All rights reserved.
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        // --- DATA & STATE MANAGEMENT ---
+        
+        // Default Mock Marketplace Data (Pre-populated)
+        const mockGlobalProducts = [
+            { id: 'p1', title: 'Premium Cotton Yarn 40s', price: 210, category: 'Yarn', location: 'Surat, India', distance: 15, seller: 'Surat Spinners', img: 'https://images.unsplash.com/photo-1605371804245-562723ec7b25?auto=format&fit=crop&q=80&w=300&h=200' },
+            { id: 'p2', title: 'Raw Silk Fabric (Unbleached)', price: 1200, category: 'Raw Fabric', location: 'Bengaluru, India', distance: 950, seller: 'SilkRoute Trads', img: 'https://images.unsplash.com/photo-1584483738018-9366e6c8e3cc?auto=format&fit=crop&q=80&w=300&h=200' },
+            { id: 'p3', title: 'Polyester Staple Fiber', price: 95, category: 'Yarn', location: 'Ahmedabad, India', distance: 260, seller: 'MegaSynthetics', img: 'https://images.unsplash.com/photo-1560706240-84a1e94441ff?auto=format&fit=crop&q=80&w=300&h=200' },
+            { id: 'p4', title: 'Denim Rolls (12oz)', price: 180, category: 'Raw Fabric', location: 'Bhilwara, India', distance: 480, seller: 'Rajasthan Denims', img: 'https://images.unsplash.com/photo-1542272201-b1ca555f8505?auto=format&fit=crop&q=80&w=300&h=200' },
+            { id: 'p5', title: 'Industrial Sewing Machine', price: 45000, category: 'Machinery', location: 'Mumbai, India', distance: 280, seller: 'TechSew Equip', img: 'https://images.unsplash.com/photo-1616423641402-999fc9640fc2?auto=format&fit=crop&q=80&w=300&h=200' },
+            { id: 'p6', title: 'Linen Fabric (100% Pure)', price: 450, category: 'Raw Fabric', location: 'Kolkata, India', distance: 1600, seller: 'Eastern Textiles', img: 'https://images.unsplash.com/photo-1598466858169-18306ee14d86?auto=format&fit=crop&q=80&w=300&h=200' },
+            { id: 'p7', title: 'Dyed Cotton Threads', price: 150, category: 'Yarn', location: 'Surat, India', distance: 5, seller: 'Vibrant Colors Ltd', img: 'https://images.unsplash.com/photo-1528698827591-e19ccd7bc23d?auto=format&fit=crop&q=80&w=300&h=200' },
+        ];
+
+        // Default Mock Chats
+        const mockChats = [
+            { id: 'c1', name: 'Aditya Patel', initial: 'AP', lastMsg: 'Is the price negotiable for bulk?', time: '10:42 AM', unread: 2, active: true },
+            { id: 'c2', name: 'Surat Spinners', initial: 'SS', lastMsg: 'We can ship by tomorrow.', time: 'Yesterday', unread: 0, active: false },
+            { id: 'c3', name: 'Rajesh (SilkRoute)', initial: 'RS', lastMsg: 'Thanks for the sample.', time: 'Mon', unread: 0, active: false }
+        ];
+
+        const mockMessages = [
+            { sender: 'them', text: 'Hello, I saw your listing for Cotton Yarn.' },
+            { sender: 'me', text: 'Hi Aditya, yes it is still available. How much quantity do you need?' },
+            { sender: 'them', text: 'I am looking for around 500 kgs to start.' },
+            { sender: 'them', text: 'Is the price negotiable for bulk?' }
+        ];
+
+        // App State
+        let userProfile = JSON.parse(localStorage.getItem('tt_profile')) || null;
+        let myProducts = JSON.parse(localStorage.getItem('tt_my_products')) || [];
+
+        // --- INITIALIZATION ---
+        function initApp() {
+            if (!userProfile) {
+                // Show Setup Wizard
+                document.getElementById('setupWizard').classList.remove('hidden');
+            } else {
+                updateUIWithProfile();
+                renderMarketplace();
+                renderMyProducts();
+                renderChats();
+                
+                // Add search listener
+                document.getElementById('globalSearch').addEventListener('input', (e) => {
+                    renderMarketplace(e.target.value);
+                });
+            }
+        }
+
+        // --- WIZARD LOGIC ---
+        function nextStep() {
+            const name = document.getElementById('setupName').value;
+            const business = document.getElementById('setupBusiness').value;
+            const loc = document.getElementById('setupLocation').value;
+            
+            if(!name || !business || !loc) {
+                alert("Please fill all fields.");
+                return;
+            }
+            
+            document.getElementById('step1').classList.add('hidden');
+            document.getElementById('step2').classList.remove('hidden');
+        }
+
+        function prevStep() {
+            document.getElementById('step2').classList.add('hidden');
+            document.getElementById('step1').classList.remove('hidden');
+        }
+
+        function completeSetup() {
+            const title = document.getElementById('setupProdTitle').value;
+            const price = document.getElementById('setupProdPrice').value;
+            
+            if(!title || !price) {
+                alert("Please add a title and price for your product.");
+                return;
+            }
+
+            // Save Profile
+            userProfile = {
+                name: document.getElementById('setupName').value,
+                business: document.getElementById('setupBusiness').value,
+                location: document.getElementById('setupLocation').value,
+                type: document.getElementById('setupType').value
+            };
+            localStorage.setItem('tt_profile', JSON.stringify(userProfile));
+
+            // Save First Product
+            const newProduct = {
+                id: 'my_' + Date.now(),
+                title: title,
+                price: parseFloat(price),
+                category: document.getElementById('setupProdCat').value,
+                desc: document.getElementById('setupProdDesc').value,
+                date: new Date().toLocaleDateString()
+            };
+            myProducts.push(newProduct);
+            localStorage.setItem('tt_my_products', JSON.stringify(myProducts));
+
+            document.getElementById('setupWizard').classList.add('hidden');
+            initApp();
+        }
+
+        // --- UI UPDATES ---
+        function updateUIWithProfile() {
+            if(!userProfile) return;
+            // Header
+            document.getElementById('headerName').innerText = userProfile.name;
+            document.getElementById('headerBusiness').innerText = userProfile.business;
+            document.getElementById('headerLocation').innerText = userProfile.location;
+            document.getElementById('headerInitial').innerText = userProfile.name.charAt(0).toUpperCase();
+
+            // Account Form
+            document.getElementById('accName').value = userProfile.name;
+            document.getElementById('accBusiness').value = userProfile.business;
+            document.getElementById('accLocation').value = userProfile.location;
+            document.getElementById('accType').value = userProfile.type;
+            
+            document.getElementById('accountNameTitle').innerText = userProfile.name;
+            document.getElementById('accountBusinessTitle').innerText = userProfile.business;
+            document.getElementById('accountInitial').innerText = userProfile.name.charAt(0).toUpperCase();
+        }
+
+        function saveProfile() {
+            userProfile = {
+                name: document.getElementById('accName').value,
+                business: document.getElementById('accBusiness').value,
+                location: document.getElementById('accLocation').value,
+                type: document.getElementById('accType').value
+            };
+            localStorage.setItem('tt_profile', JSON.stringify(userProfile));
+            updateUIWithProfile();
+            
+            // Show toast (simplified alert)
+            const btn = event.target;
+            const ogText = btn.innerText;
+            btn.innerText = "Saved!";
+            btn.classList.add("bg-green-600");
+            setTimeout(() => {
+                btn.innerText = ogText;
+                btn.classList.remove("bg-green-600");
+            }, 2000);
+        }
+
+        // --- NAVIGATION ---
+        function navigate(viewId) {
+            // Update nav styles
+            document.querySelectorAll('nav button').forEach(btn => {
+                btn.classList.remove('nav-active');
+            });
+            document.getElementById(`nav-${viewId}`).classList.add('nav-active');
+
+            // Hide all views
+            const views = ['marketplace', 'products', 'chat', 'account', 'about'];
+            views.forEach(v => {
+                document.getElementById(`view-${v}`).classList.add('hidden');
+                document.getElementById(`view-${v}`).classList.remove('block');
+            });
+
+            // Show target view
+            document.getElementById(`view-${viewId}`).classList.remove('hidden');
+            document.getElementById(`view-${viewId}`).classList.add('block');
+        }
+
+        // --- MARKETPLACE LOGIC ---
+        function renderMarketplace(searchQuery = '') {
+            const grid = document.getElementById('marketplaceGrid');
+            const sortMode = document.getElementById('marketSort').value;
+            
+            // Combine mock data + user products into the pool
+            let allProducts = [...mockGlobalProducts];
+            
+            // Add user's products (distance 0)
+            myProducts.forEach(p => {
+                allProducts.push({
+                    id: p.id,
+                    title: p.title,
+                    price: p.price,
+                    category: p.category,
+                    location: userProfile.location,
+                    distance: 0,
+                    seller: userProfile.business + ' (You)',
+                    img: 'https://images.unsplash.com/photo-1544253342-6323c2a04eb9?auto=format&fit=crop&q=80&w=300&h=200' // Generic placeholder
+                });
+            });
+
+            // Filter by search
+            if (searchQuery) {
+                const q = searchQuery.toLowerCase();
+                allProducts = allProducts.filter(p => 
+                    p.title.toLowerCase().includes(q) || 
+                    p.category.toLowerCase().includes(q) || 
+                    p.seller.toLowerCase().includes(q)
+                );
+            }
+
+            // Sort
+            if (sortMode === 'distance') {
+                allProducts.sort((a, b) => a.distance - b.distance);
+            } else if (sortMode === 'price-low') {
+                allProducts.sort((a, b) => a.price - b.price);
+            } else if (sortMode === 'price-high') {
+                allProducts.sort((a, b) => b.price - a.price);
+            }
+
+            // Render
+            grid.innerHTML = '';
+            if(allProducts.length === 0) {
+                grid.innerHTML = `<div class="col-span-full text-center py-10 text-gray-500">No products found matching your search.</div>`;
+                return;
+            }
+
+            allProducts.forEach(p => {
+                const isMine = p.distance === 0;
+                const card = `
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition group">
+                        <div class="h-40 bg-gray-200 relative overflow-hidden">
+                            <img src="${p.img}" alt="${p.title}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
+                            <div class="absolute top-2 right-2 bg-white/90 backdrop-blur px-2 py-1 rounded text-xs font-bold text-gray-800 shadow-sm">
+                                ${p.category}
+                            </div>
+                        </div>
+                        <div class="p-4">
+                            <h3 class="font-bold text-gray-900 text-lg truncate" title="${p.title}">${p.title}</h3>
+                            <p class="text-brand-600 font-bold text-lg mt-1">₹${p.price} <span class="text-xs text-gray-500 font-normal">/ unit</span></p>
+                            
+                            <div class="mt-4 flex flex-col gap-1">
+                                <div class="flex items-center gap-2 text-sm text-gray-600">
+                                    <i class="ph ph-storefront"></i>
+                                    <span class="truncate">${p.seller}</span>
+                                </div>
+                                <div class="flex items-center gap-2 text-sm text-gray-500">
+                                    <i class="ph ph-map-pin"></i>
+                                    <span class="truncate">${p.location} (${p.distance === 0 ? 'Local' : p.distance + ' km'})</span>
+                                </div>
+                            </div>
+                            
+                            <button class="mt-4 w-full py-2 rounded-lg text-sm font-medium transition ${isMine ? 'bg-gray-100 text-gray-600 cursor-default' : 'bg-brand-50 text-brand-600 hover:bg-brand-600 hover:text-white'}" ${isMine ? 'disabled' : `onclick="openChatWith('${p.seller}')"`}>
+                                ${isMine ? 'Your Product' : 'Message Seller'}
+                            </button>
+                        </div>
+                    </div>
+                `;
+                grid.innerHTML += card;
+            });
+        }
+
+        // --- MY PRODUCTS LOGIC ---
+        function renderMyProducts() {
+            const tbody = document.getElementById('myProductsTable');
+            tbody.innerHTML = '';
+            
+            if(myProducts.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="px-6 py-8 text-center text-gray-500">You haven't listed any products yet.</td></tr>`;
+                return;
+            }
+
+            myProducts.forEach(p => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center">
+                            <div class="h-10 w-10 flex-shrink-0 bg-gray-100 rounded-lg flex items-center justify-center">
+                                <i class="ph ph-package text-gray-400 text-xl"></i>
+                            </div>
+                            <div class="ml-4">
+                                <div class="text-sm font-medium text-gray-900">${p.title}</div>
+                                <div class="text-sm text-gray-500">Listed: ${p.date}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-brand-100 text-brand-800">
+                            ${p.category}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
+                        ₹${p.price}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <button class="text-brand-600 hover:text-brand-900 mr-3">Edit</button>
+                        <button onclick="deleteProduct('${p.id}')" class="text-red-600 hover:text-red-900">Delete</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function deleteProduct(id) {
+            if(confirm('Are you sure you want to remove this listing?')) {
+                myProducts = myProducts.filter(p => p.id !== id);
+                localStorage.setItem('tt_my_products', JSON.stringify(myProducts));
+                renderMyProducts();
+                renderMarketplace(); // Update marketplace too
+            }
+        }
+
+        // --- CHAT LOGIC ---
+        function renderChats() {
+            const contactsDiv = document.getElementById('chatContacts');
+            const msgsDiv = document.getElementById('chatMessages');
+            
+            // Render Contacts Sidebar
+            contactsDiv.innerHTML = '';
+            mockChats.forEach(c => {
+                const activeClass = c.active ? 'bg-white border-l-4 border-brand-500 shadow-sm' : 'hover:bg-gray-100 border-l-4 border-transparent';
+                const unreadBadge = c.unread > 0 ? `<div class="h-5 w-5 rounded-full bg-brand-500 text-white text-xs flex items-center justify-center font-bold">${c.unread}</div>` : '';
+                
+                contactsDiv.innerHTML += `
+                    <div class="p-3 cursor-pointer ${activeClass} border-b border-gray-100 transition flex items-center gap-3">
+                        <div class="h-10 w-10 rounded-full bg-brand-100 text-brand-600 flex items-center justify-center font-bold flex-shrink-0">
+                            ${c.initial}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex justify-between items-center mb-0.5">
+                                <h4 class="text-sm font-bold text-gray-900 truncate">${c.name}</h4>
+                                <span class="text-xs text-gray-400">${c.time}</span>
+                            </div>
+                            <p class="text-xs text-gray-500 truncate ${c.unread > 0 ? 'font-semibold text-gray-800' : ''}">${c.lastMsg}</p>
+                        </div>
+                        ${unreadBadge}
+                    </div>
+                `;
+            });
+
+            // Render Messages (Mock active chat)
+            msgsDiv.innerHTML = '';
+            mockMessages.forEach(m => {
+                appendMessageToUI(m.text, m.sender);
+            });
+            scrollToBottom();
+        }
+
+        function appendMessageToUI(text, sender) {
+            const msgsDiv = document.getElementById('chatMessages');
+            const isMe = sender === 'me';
+            
+            const msgHtml = `
+                <div class="flex ${isMe ? 'justify-end' : 'justify-start'} mb-4">
+                    <div class="max-w-[70%] rounded-2xl px-4 py-2 ${isMe ? 'bg-brand-600 text-white rounded-br-none' : 'bg-white border border-gray-200 text-gray-800 rounded-bl-none shadow-sm'}">
+                        <p class="text-sm">${text}</p>
+                        <span class="text-[10px] ${isMe ? 'text-brand-200' : 'text-gray-400'} block mt-1 text-right">Just now</span>
+                    </div>
+                </div>
+            `;
+            msgsDiv.innerHTML += msgHtml;
+        }
+
+        function handleChatEnter(e) {
+            if (e.key === 'Enter') {
+                sendChatMessage();
+            }
+        }
+
+        function sendChatMessage() {
+            const input = document.getElementById('chatInputMessage');
+            const text = input.value.trim();
+            if(!text) return;
+
+            // Add to UI
+            appendMessageToUI(text, 'me');
+            input.value = '';
+            scrollToBottom();
+
+            // Simulate reply after 1.5s
+            setTimeout(() => {
+                appendMessageToUI("Thanks for the message. I'll check my inventory and get back to you shortly.", 'them');
+                scrollToBottom();
+            }, 1500);
+        }
+
+        function scrollToBottom() {
+            const msgsDiv = document.getElementById('chatMessages');
+            msgsDiv.scrollTop = msgsDiv.scrollHeight;
+        }
+
+        function openChatWith(sellerName) {
+            navigate('chat');
+            // Mock visual update for opening a new chat
+            document.getElementById('activeChatName').innerText = sellerName;
+            document.getElementById('chatMessages').innerHTML = `
+                <div class="text-center text-xs text-gray-400 my-4">Today</div>
+                <div class="flex justify-end mb-4">
+                    <div class="max-w-[70%] rounded-2xl px-4 py-2 bg-brand-600 text-white rounded-br-none">
+                        <p class="text-sm">Hi, I am interested in your product listing.</p>
+                        <span class="text-[10px] text-brand-200 block mt-1 text-right">Just now</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        // --- UTILS ---
+        function resetApp() {
+            if(confirm("This will clear all your local profile and product data. Proceed?")) {
+                localStorage.removeItem('tt_profile');
+                localStorage.removeItem('tt_my_products');
+                location.reload();
+            }
+        }
+
+        // Boot
+        window.onload = initApp;
+
+    </script>
+</body>
+</html>
