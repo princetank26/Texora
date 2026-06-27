@@ -3,821 +3,1838 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TextileTrade - The Marketplace for Textile Manufacturers & Traders</title>
+    <title>Texora - Peer-to-Peer Textile Trading & Logistics Exchange</title>
+    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/@phosphor-icons/web"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        brand: {
-                            50: '#eff6ff',
-                            100: '#dbeafe',
-                            500: '#3b82f6',
-                            600: '#2563eb',
-                            900: '#1e3a8a',
-                        }
-                    }
-                }
-            }
-        }
-    </script>
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons for Beautiful Graphics -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        /* Custom scrollbar for a cleaner look */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+            scroll-behavior: smooth;
+        }
+        /* Custom subtle scrollbars */
         ::-webkit-scrollbar {
             width: 6px;
             height: 6px;
         }
         ::-webkit-scrollbar-track {
-            background: transparent; 
+            background: #f1f5f9;
         }
         ::-webkit-scrollbar-thumb {
-            background: #cbd5e1; 
-            border-radius: 10px;
+            background: #cbd5e1;
+            border-radius: 4px;
         }
         ::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8; 
+            background: #94a3b8;
         }
-        
-        .nav-active {
-            background-color: #eff6ff;
-            color: #2563eb;
-            border-right: 3px solid #2563eb;
+        /* Soft pulsing animation for live notifications */
+        @keyframes pulse-soft {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: .7; transform: scale(1.05); }
         }
-        
-        .fade-in {
-            animation: fadeIn 0.3s ease-in-out;
+        .pulse-accent {
+            animation: pulse-soft 2s infinite ease-in-out;
         }
+
+        /* --- Splash Screen Animation Styles --- */
         
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+        /* 1. Logo Spins and Pops In (Spring bounce effect) */
+        .animate-logo-enter {
+            /* 1.5s duration, using a custom cubic-bezier for a "springy" stop */
+            animation: popInSpin 1.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+ 
+        @keyframes popInSpin {
+            0% { 
+                transform: scale(0) rotate(-720deg); /* Starts small and rotated twice backward */
+                opacity: 0; 
+            }
+            100% { 
+                transform: scale(1) rotate(0deg); 
+                opacity: 1; 
+            }
+        }
+ 
+        /* 2. Continuous soft pulse on the inner icon */
+        .animate-icon-pulse {
+            animation: pulseSoft 2s infinite ease-in-out;
+            animation-delay: 1.5s; /* Waits for the spin to finish before pulsing */
+        }
+ 
+        @keyframes pulseSoft {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+        }
+ 
+        /* 3. Text container expands and fades in, pushing the logo left seamlessly */
+        .animate-text-expand {
+            max-width: 0;
+            opacity: 0;
+            overflow: hidden;
+            white-space: nowrap; /* Prevents text wrapping while expanding */
+            /* Starts at 1.5s exactly when the logo finishes spinning */
+            animation: expandReveal 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) 1.5s forwards;
+        }
+ 
+        @keyframes expandReveal {
+            0% { 
+                max-width: 0; 
+                opacity: 0; 
+                margin-left: 0; 
+                transform: translateX(-20px); 
+            }
+            100% { 
+                max-width: 600px; /* Expands to full width */
+                opacity: 1; 
+                margin-left: 1.5rem; /* Adds spacing between logo and text */
+                transform: translateX(0); 
+            }
+        }
+
+        /* Overlay smooth transitions */
+        .splash-overlay {
+            transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.8s;
         }
     </style>
 </head>
-<body class="bg-gray-50 text-gray-800 font-sans h-screen overflow-hidden flex">
+<body class="min-h-screen pb-24">
 
-    <!-- SETUP WIZARD OVERLAY -->
-    <div id="setupWizard" class="fixed inset-0 bg-gray-900/80 z-50 flex items-center justify-center backdrop-blur-sm hidden">
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
-            <div class="bg-brand-600 text-white p-6">
-                <h2 class="text-2xl font-bold flex items-center gap-2">
-                    <i class="ph ph-intersect"></i> Welcome to TextileTrade
-                </h2>
-                <p class="text-brand-100 mt-1">Let's get your business profile set up.</p>
-            </div>
+    <!-- React App Container -->
+    <div id="root"></div>
+
+    <!-- React, ReactDOM, and Babel for live compilation -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+
+    <!-- Custom React Code -->
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
+
+        // Textile Hub Coordinates Database for Distance Calculations
+        const INITIAL_HUBS = {
+            "Surat": { lat: 21.1702, lon: 72.8311, state: "Gujarat" },
+            "Ahmedabad": { lat: 23.0225, lon: 72.5714, state: "Gujarat" },
+            "Mumbai": { lat: 19.0760, lon: 72.8777, state: "Maharashtra" },
+            "Coimbatore": { lat: 11.0168, lon: 76.9558, state: "Tamil Nadu" },
+            "Ludhiana": { lat: 30.9010, lon: 75.8573, state: "Punjab" },
+            "Panipat": { lat: 29.3909, lon: 76.9635, state: "Haryana" },
+            "Delhi": { lat: 28.7041, lon: 77.1025, state: "Delhi" }
+        };
+
+        // Standard Haversine Distance Calculator (km)
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371; // Earth's radius in km
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a =
+                Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return parseFloat((R * c).toFixed(1));
+        }
+
+        // Mock Fabrics Database
+        const INITIAL_FABRICS = [
+            {
+                id: 1,
+                name: "Premium Indigo Denim Twill 14oz",
+                category: "Denim",
+                basePrice: 135, // ₹ per meter
+                transportRate: 0.12, // ₹ per km per meter
+                location: "Ahmedabad",
+                seller: "Patel Cotton Mills",
+                sellerRating: 4.8,
+                stock: 4500,
+                description: "Deep indigo vat-dyed denim fabric perfect for high-end jeans, jackets, and heavy apparel manufacturing. Highly durable structured twill weave.",
+                image: "bg-gradient-to-br from-blue-900 to-indigo-950",
+                texturePattern: "diagonal-lines"
+            },
+            {
+                id: 2,
+                name: "Organic Pure Cotton Malmal",
+                category: "Cotton",
+                basePrice: 65,
+                transportRate: 0.08,
+                location: "Surat",
+                seller: "Ambika Textile Hub",
+                sellerRating: 4.9,
+                stock: 12000,
+                description: "Super combed extra-fine cotton mulmul fabric. Highly breathable, soft-washed, ideal for summery kurtis, sarees, and traditional wear linings.",
+                image: "bg-gradient-to-br from-rose-50 to-slate-200 border-rose-100",
+                texturePattern: "fine-grid"
+            },
+            {
+                id: 3,
+                name: "Banarasi Katan Silk Brocade",
+                category: "Silk",
+                basePrice: 520,
+                transportRate: 0.25,
+                location: "Panipat",
+                seller: "Royal Heritage Weaves",
+                sellerRating: 4.7,
+                stock: 850,
+                description: "Luxurious pure mulberry silk hand-woven with intricate zari motifs. Magnificent metallic sheen designed for bridal wear and premium ethnic styling.",
+                image: "bg-gradient-to-br from-amber-600 to-amber-900",
+                texturePattern: "ornate-damask"
+            },
+            {
+                id: 4,
+                name: "Structured Khadi Linen Blend",
+                category: "Linen",
+                basePrice: 195,
+                transportRate: 0.15,
+                location: "Delhi",
+                seller: "Swadeshi Fabric Co.",
+                sellerRating: 4.5,
+                stock: 3100,
+                description: "Slightly textured handloom khadi blended beautifully with flax linen. Highly absorbent with natural climate control attributes. Great for casual blazers.",
+                image: "bg-gradient-to-br from-yellow-100 to-amber-100",
+                texturePattern: "rough-texture"
+            },
+            {
+                id: 5,
+                name: "Heavy Polyester Viscose Suiting",
+                category: "Synthetic",
+                basePrice: 145,
+                transportRate: 0.10,
+                location: "Mumbai",
+                seller: "Gateway Looms & Knits",
+                sellerRating: 4.6,
+                stock: 6200,
+                description: "Poly-viscose blend featuring high wrinkle recovery, durable crease retention, and elegant drape. Excellent for corporate uniforms and formal suits.",
+                image: "bg-gradient-to-br from-slate-700 to-slate-900",
+                texturePattern: "herringbone"
+            },
+            {
+                id: 6,
+                name: "Lycra Stretch Rib Knit",
+                category: "Knit",
+                basePrice: 175,
+                transportRate: 0.14,
+                location: "Ludhiana",
+                seller: "Apex Knitwear Corp",
+                sellerRating: 4.4,
+                stock: 5000,
+                description: "2x2 elastane rib-knit with superb stretch recovery. Breathable texture ideal for collars, cuffs, fitted tees, and sportswear accessories.",
+                image: "bg-gradient-to-br from-emerald-800 to-teal-950",
+                texturePattern: "vertical-stripes"
+            },
+            {
+                id: 7,
+                name: "Pure South Silk Kanchi Border",
+                category: "Silk",
+                basePrice: 680,
+                transportRate: 0.30,
+                location: "Coimbatore",
+                seller: "Kaveri Handlooms",
+                sellerRating: 4.9,
+                stock: 600,
+                description: "Authentic double-warp silk containing gorgeous gold thread accents. Handwoven following age-old heritage styles by national award weavers.",
+                image: "bg-gradient-to-br from-purple-700 to-fuchsia-900",
+                texturePattern: "grand-border"
+            }
+        ];
+
+        // Sample initial simulated conversations
+        const INITIAL_CHATS = [
+            {
+                id: 101,
+                seller: "Ambika Textile Hub",
+                productName: "Organic Pure Cotton Malmal",
+                messages: [
+                    { sender: "seller", text: "Hello! Thank you for showing interest in our Cotton Malmal. What volume are you looking to source?", time: "Yesterday" },
+                    { sender: "buyer", text: "Hi, I need about 1500 meters delivered to my factory. Can we discuss wholesale discounts?", time: "Yesterday" },
+                    { sender: "seller", text: "We can reduce the base price to ₹62/meter for orders above 1000 meters. Let me know!", time: "10:15 AM" }
+                ]
+            },
+            {
+                id: 102,
+                seller: "Patel Cotton Mills",
+                productName: "Premium Indigo Denim Twill 14oz",
+                messages: [
+                    { sender: "seller", text: "Our denim dispatch is ready for this Friday. Would you like a sample booklet shipped first?", time: "2 Days Ago" }
+                ]
+            }
+        ];
+
+        function App() {
+            // Splash Animation States
+            const [showIntro, setShowIntro] = useState(true);
+            const [fadeOutIntro, setFadeOutIntro] = useState(false);
+            const [introTriggerKey, setIntroTriggerKey] = useState(0); // For replaying animation
+
+            // Main routing and databases state
+            const [currentPage, setCurrentPage] = useState('marketplace');
+            const [fabrics, setFabrics] = useState(INITIAL_FABRICS);
+            const [chats, setChats] = useState(INITIAL_CHATS);
+            const [activeChatId, setActiveChatId] = useState(null);
             
-            <div class="p-6 overflow-y-auto flex-1" id="wizardSteps">
-                <!-- Step 1: Profile -->
-                <div id="step1" class="space-y-4">
-                    <h3 class="text-lg font-semibold border-b pb-2">Step 1: Your Details</h3>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
-                            <input type="text" id="setupName" class="w-full border rounded-lg p-2.5 focus:ring-2 focus:ring-brand-500 outline-none" placeholder="John Doe">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Business Name</label>
-                            <input type="text" id="setupBusiness" class="w-full border rounded-lg p-2.5 focus:ring-2 focus:ring-brand-500 outline-none" placeholder="Doe Textiles Ltd.">
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Location (City, Country)</label>
-                            <input type="text" id="setupLocation" class="w-full border rounded-lg p-2.5 focus:ring-2 focus:ring-brand-500 outline-none" placeholder="Surat, India">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Business Type</label>
-                            <select id="setupType" class="w-full border rounded-lg p-2.5 focus:ring-2 focus:ring-brand-500 outline-none">
-                                <option>Manufacturer</option>
-                                <option>Trader / Wholesaler</option>
-                                <option>Retailer</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="flex justify-end pt-4">
-                        <button onclick="nextStep()" class="bg-brand-600 text-white px-6 py-2 rounded-lg hover:bg-brand-700 transition">Next Step <i class="ph ph-arrow-right inline-block align-middle ml-1"></i></button>
-                    </div>
-                </div>
-
-                <!-- Step 2: First Product -->
-                <div id="step2" class="space-y-4 hidden">
-                    <h3 class="text-lg font-semibold border-b pb-2">Step 2: Add Your First Product Listing</h3>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Product Title</label>
-                        <input type="text" id="setupProdTitle" class="w-full border rounded-lg p-2.5 focus:ring-2 focus:ring-brand-500 outline-none" placeholder="e.g. Premium Cotton Yarn 40s">
-                    </div>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Price (per kg/meter)</label>
-                            <div class="flex">
-                                <span class="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 sm:text-sm">₹</span>
-                                <input type="number" id="setupProdPrice" class="flex-1 block w-full rounded-none rounded-r-lg border border-gray-300 p-2.5 focus:ring-brand-500 focus:border-brand-500 outline-none" placeholder="150">
-                            </div>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                            <select id="setupProdCat" class="w-full border rounded-lg p-2.5 focus:ring-2 focus:ring-brand-500 outline-none">
-                                <option>Yarn</option>
-                                <option>Raw Fabric</option>
-                                <option>Finished Garments</option>
-                                <option>Machinery</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                        <textarea id="setupProdDesc" rows="3" class="w-full border rounded-lg p-2.5 focus:ring-2 focus:ring-brand-500 outline-none" placeholder="Briefly describe the quality, origin, and minimum order quantity..."></textarea>
-                    </div>
-                    <div class="flex justify-between pt-4">
-                        <button onclick="prevStep()" class="text-gray-600 hover:text-gray-900 px-4 py-2 font-medium">Back</button>
-                        <button onclick="completeSetup()" class="bg-brand-600 text-white px-6 py-2 rounded-lg hover:bg-brand-700 transition">Complete Setup <i class="ph ph-check-circle inline-block align-middle ml-1"></i></button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- LEFT SIDEBAR NAVIGATION -->
-    <aside class="w-64 bg-white border-r border-gray-200 flex flex-col z-10 flex-shrink-0">
-        <!-- Logo -->
-        <div class="h-16 flex items-center px-6 border-b border-gray-200">
-            <div class="flex items-center gap-2 text-brand-600 font-bold text-xl">
-                <i class="ph-fill ph-intersect text-2xl"></i>
-                TextileTrade
-            </div>
-        </div>
-
-        <!-- Navigation Links -->
-        <nav class="flex-1 overflow-y-auto py-4 px-3 space-y-1">
-            <button onclick="navigate('marketplace')" id="nav-marketplace" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-gray-50 hover:text-brand-600 font-medium transition text-left nav-active">
-                <i class="ph ph-storefront text-xl"></i>
-                Marketplace
-            </button>
-            <button onclick="navigate('products')" id="nav-products" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-gray-50 hover:text-brand-600 font-medium transition text-left">
-                <i class="ph ph-package text-xl"></i>
-                My Products
-            </button>
-            <button onclick="navigate('chat')" id="nav-chat" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-gray-50 hover:text-brand-600 font-medium transition text-left relative">
-                <i class="ph ph-chats text-xl"></i>
-                Chat
-                <span class="absolute right-3 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">2</span>
-            </button>
-            <button onclick="navigate('account')" id="nav-account" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-gray-50 hover:text-brand-600 font-medium transition text-left">
-                <i class="ph ph-user-circle text-xl"></i>
-                Account
-            </button>
+            // Dynamic State for Textile Hub Locations
+            const [hubs, setHubs] = useState(INITIAL_HUBS);
             
-            <div class="pt-8 pb-2 px-3">
-                <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">System</p>
-            </div>
-            <button onclick="navigate('about')" id="nav-about" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-gray-50 hover:text-brand-600 font-medium transition text-left">
-                <i class="ph ph-info text-xl"></i>
-                About App
-            </button>
-        </nav>
-
-        <!-- Sidebar Footer -->
-        <div class="p-4 border-t border-gray-200">
-            <button onclick="resetApp()" class="flex items-center gap-2 text-sm text-red-500 hover:text-red-700 transition">
-                <i class="ph ph-sign-out"></i> Reset Data
-            </button>
-        </div>
-    </aside>
-
-    <!-- MAIN CONTENT COLUMN -->
-    <main class="flex-1 flex flex-col min-w-0">
-        
-        <!-- TOP HEADER PANEL -->
-        <header class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 flex-shrink-0 z-10">
-            <!-- Search Bar -->
-            <div class="flex-1 max-w-lg">
-                <div class="relative">
-                    <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg"></i>
-                    <input type="text" id="globalSearch" placeholder="Search for textiles, machinery, or traders..." class="w-full bg-gray-100 border-transparent focus:bg-white focus:border-brand-500 focus:ring-2 focus:ring-brand-200 rounded-lg pl-10 pr-4 py-2 text-sm transition outline-none">
-                </div>
-            </div>
-
-            <!-- Header Actions -->
-            <div class="flex items-center gap-6 ml-4">
-                <!-- Location -->
-                <div class="flex items-center gap-2 text-sm text-gray-600">
-                    <i class="ph-fill ph-map-pin text-brand-500"></i>
-                    <span id="headerLocation">Surat, India</span>
-                </div>
-                
-                <div class="w-px h-6 bg-gray-200"></div>
-                
-                <!-- Account Profile -->
-                <div class="flex items-center gap-3 cursor-pointer" onclick="navigate('account')">
-                    <div class="text-right hidden md:block">
-                        <p class="text-sm font-semibold text-gray-800 leading-tight" id="headerName">John Doe</p>
-                        <p class="text-xs text-gray-500" id="headerBusiness">Doe Textiles</p>
-                    </div>
-                    <div class="h-9 w-9 rounded-full bg-brand-100 text-brand-600 flex items-center justify-center font-bold border border-brand-200">
-                        <span id="headerInitial">J</span>
-                    </div>
-                </div>
-            </div>
-        </header>
-
-        <!-- DYNAMIC VIEWS -->
-        <div class="flex-1 overflow-hidden relative bg-gray-50">
+            // Search & Filter state
+            const [searchQuery, setSearchQuery] = useState('');
+            const [selectedCategory, setSelectedCategory] = useState('All');
+            const [sortBy, setSortBy] = useState('nearest'); // 'nearest', 'lowest-base', 'lowest-delivered', 'rating'
             
-            <!-- 1. MARKETPLACE VIEW -->
-            <div id="view-marketplace" class="absolute inset-0 overflow-y-auto p-6 fade-in block">
-                <div class="max-w-6xl mx-auto">
-                    <!-- Top Bar -->
-                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-                        <div>
-                            <h1 class="text-2xl font-bold text-gray-900">Global Marketplace</h1>
-                            <p class="text-gray-500 text-sm mt-1">Discover textile products from manufacturers and traders.</p>
-                        </div>
-                        <div class="flex items-center gap-3">
-                            <span class="text-sm text-gray-500 font-medium">Sort By:</span>
-                            <select id="marketSort" onchange="renderMarketplace()" class="bg-white border border-gray-300 text-gray-700 text-sm rounded-lg focus:ring-brand-500 focus:border-brand-500 block p-2 outline-none cursor-pointer">
-                                <option value="distance">Distance (Nearest First)</option>
-                                <option value="price-low">Price (Lowest First)</option>
-                                <option value="price-high">Price (Highest First)</option>
-                            </select>
-                        </div>
-                    </div>
+            // Auth State - starts empty (anonymous guest mode)
+            const [user, setUser] = useState(null); 
+            
+            const [loginModalOpen, setLoginModalOpen] = useState(false);
+            const [loginMessage, setLoginMessage] = useState("");
+            const [usernameInput, setUsernameInput] = useState("");
+            const [passwordInput, setPasswordInput] = useState("");
+            const [authTab, setAuthTab] = useState('login'); // 'login' or 'signup'
+            const [signupCity, setSignupCity] = useState('Surat');
 
-                    <!-- Products Grid -->
-                    <div id="marketplaceGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                        <!-- Populated by JS -->
-                    </div>
-                </div>
-            </div>
+            // Form inputs state for "Add Fabric" (fixed undefined variable crashes)
+            const [newProductName, setNewProductName] = useState("");
+            const [newProductCat, setNewProductCat] = useState("Cotton");
+            const [newProductPrice, setNewProductPrice] = useState("");
+            const [newProductTransport, setNewProductTransport] = useState("");
+            const [newProductDesc, setNewProductDesc] = useState("");
 
-            <!-- 2. MY PRODUCTS VIEW -->
-            <div id="view-products" class="absolute inset-0 overflow-y-auto p-6 fade-in hidden">
-                <div class="max-w-6xl mx-auto">
-                    <div class="flex items-center justify-between mb-6">
-                        <div>
-                            <h1 class="text-2xl font-bold text-gray-900">My Product Listings</h1>
-                            <p class="text-gray-500 text-sm mt-1">Manage the products you are selling.</p>
-                        </div>
-                        <button class="bg-brand-600 text-white px-4 py-2 rounded-lg hover:bg-brand-700 transition flex items-center gap-2 text-sm font-medium">
-                            <i class="ph ph-plus-bold"></i> Add New Product
-                        </button>
-                    </div>
+            // Location Add Form State
+            const [newCityName, setNewCityName] = useState("");
+            const [newCityState, setNewCityState] = useState("");
+            const [newCityLat, setNewCityLat] = useState("");
+            const [newCityLon, setNewCityLon] = useState("");
 
-                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                        <table class="min-w-full divide-y divide-gray-200">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
-                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="myProductsTable" class="bg-white divide-y divide-gray-200">
-                                <!-- Populated by JS -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
+            // Action to execute immediately after logging in (e.g., open chat with seller)
+            const [pendingAction, setPendingAction] = useState(null);
 
-            <!-- 3. CHAT VIEW -->
-            <div id="view-chat" class="absolute inset-0 overflow-hidden fade-in hidden">
-                <div class="h-full flex bg-white m-4 rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                    <!-- Chat Sidebar -->
-                    <div class="w-1/3 border-r border-gray-200 flex flex-col bg-gray-50">
-                        <div class="p-4 border-b border-gray-200 bg-white">
-                            <h2 class="text-lg font-bold text-gray-800">Messages</h2>
-                            <div class="mt-3 relative">
-                                <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
-                                <input type="text" placeholder="Search chats..." class="w-full bg-gray-100 border-transparent rounded-lg pl-9 pr-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-brand-500">
-                            </div>
-                        </div>
-                        <div class="flex-1 overflow-y-auto" id="chatContacts">
-                            <!-- Populated by JS -->
-                        </div>
-                    </div>
+            // Toast/Alert state
+            const [toast, setToast] = useState(null);
+
+            // Auto-advance splash intro after 3.8s
+            useEffect(() => {
+                if (showIntro) {
+                    const fadeTimer = setTimeout(() => {
+                        setFadeOutIntro(true);
+                        const hideTimer = setTimeout(() => {
+                            setShowIntro(false);
+                        }, 800); // Wait for transition fade duration
+                        return () => clearTimeout(hideTimer);
+                    }, 3800);
+                    return () => clearTimeout(fadeTimer);
+                }
+            }, [showIntro, introTriggerKey]);
+
+            // Manual Skip Splash Screen
+            const skipIntro = () => {
+                setFadeOutIntro(true);
+                setTimeout(() => {
+                    setShowIntro(false);
+                }, 400);
+            };
+
+            // Replay Intro function
+            const replayIntro = () => {
+                setFadeOutIntro(false);
+                setIntroTriggerKey(prev => prev + 1);
+                setShowIntro(true);
+            };
+
+            const triggerToast = (msg, type = 'success') => {
+                setToast({ text: msg, type });
+                setTimeout(() => setToast(null), 4000);
+            };
+
+            // Calculate distance & pricing for all fabrics relative to user's location
+            const processFabricListings = useMemo(() => {
+                // If user is not logged in, we assume a default location (Surat) to calculate prices
+                const userLat = user ? user.lat : hubs["Surat"].lat;
+                const userLon = user ? user.lon : hubs["Surat"].lon;
+                const userCity = user ? user.city : "Surat";
+
+                return fabrics.map(fabric => {
+                    const hubCoords = hubs[fabric.location] || hubs["Surat"];
+                    const distance = calculateDistance(userLat, userLon, hubCoords.lat, hubCoords.lon);
                     
-                    <!-- Chat Area -->
-                    <div class="flex-1 flex flex-col bg-white">
-                        <!-- Chat Header -->
-                        <div class="p-4 border-b border-gray-200 flex items-center justify-between">
-                            <div class="flex items-center gap-3">
-                                <div class="h-10 w-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold">
-                                    AP
+                    // Simple shipping model: distance * rate per km * per meter
+                    const transportCost = parseFloat((distance * fabric.transportRate).toFixed(2));
+                    const deliveredPrice = parseFloat((fabric.basePrice + transportCost).toFixed(2));
+
+                    return {
+                        ...fabric,
+                        calculatedDistance: distance,
+                        transportCost: transportCost,
+                        deliveredPrice: deliveredPrice
+                    };
+                });
+            }, [fabrics, user, hubs]);
+
+            // Filter & Search & Sort engine
+            const filteredFabrics = useMemo(() => {
+                let results = [...processFabricListings];
+
+                // Category Filter
+                if (selectedCategory !== 'All') {
+                    results = results.filter(f => f.category === selectedCategory);
+                }
+
+                // Search Bar Filter (Fabric Name, Category, or Seller Name)
+                if (searchQuery.trim() !== '') {
+                    const query = searchQuery.toLowerCase();
+                    results = results.filter(f => 
+                        f.name.toLowerCase().includes(query) ||
+                        f.seller.toLowerCase().includes(query) ||
+                        f.category.toLowerCase().includes(query) ||
+                        f.location.toLowerCase().includes(query)
+                    );
+                }
+
+                // Sorting mechanism
+                if (sortBy === 'nearest') {
+                    results.sort((a, b) => a.calculatedDistance - b.calculatedDistance);
+                } else if (sortBy === 'lowest-base') {
+                    results.sort((a, b) => a.basePrice - b.basePrice);
+                } else if (sortBy === 'highest-base') {
+                    results.sort((a, b) => b.basePrice - a.basePrice);
+                } else if (sortBy === 'lowest-delivered') {
+                    results.sort((a, b) => a.deliveredPrice - b.deliveredPrice);
+                } else if (sortBy === 'highest-delivered') {
+                    results.sort((a, b) => b.deliveredPrice - a.deliveredPrice);
+                } else if (sortBy === 'rating') {
+                    results.sort((a, b) => b.sellerRating - a.sellerRating);
+                }
+
+                return results;
+            }, [processFabricListings, selectedCategory, searchQuery, sortBy]);
+
+            // Handle switching user location (recalculations instantly!)
+            const handleLocationChange = (cityName) => {
+                if (!user) {
+                    triggerToast("Please sign in first to set your active warehousing port.", "error");
+                    setLoginMessage("Please sign in to lock in your shipping destination port.");
+                    setLoginModalOpen(true);
+                    return;
+                }
+                const coords = hubs[cityName];
+                if (coords) {
+                    setUser(prev => ({
+                        ...prev,
+                        city: cityName,
+                        lat: coords.lat,
+                        lon: coords.lon
+                    }));
+                    triggerToast(`Location updated to ${cityName}! Transport costs recalculated instantly.`, "success");
+                }
+            };
+
+            // Location Adder Function
+            const handleAddLocation = (e) => {
+                e.preventDefault();
+                if (!newCityName || !newCityState || !newCityLat || !newCityLon) {
+                    triggerToast("Please fill all custom coordinate fields.", "error");
+                    return;
+                }
+
+                const latNum = parseFloat(newCityLat);
+                const lonNum = parseFloat(newCityLon);
+
+                if (isNaN(latNum) || latNum < -90 || latNum > 90) {
+                    triggerToast("Latitude must be a valid number between -90 and 90.", "error");
+                    return;
+                }
+                if (isNaN(lonNum) || lonNum < -180 || lonNum > 180) {
+                    triggerToast("Longitude must be a valid number between -180 and 180.", "error");
+                    return;
+                }
+
+                const formattedName = newCityName.trim();
+
+                setHubs(prev => ({
+                    ...prev,
+                    [formattedName]: {
+                        lat: latNum,
+                        lon: lonNum,
+                        state: newCityState.trim()
+                    }
+                }));
+
+                triggerToast(`"${formattedName}" successfully added as a trade hub port!`, "success");
+
+                // Clear fields
+                setNewCityName("");
+                setNewCityState("");
+                setNewCityLat("");
+                setNewCityLon("");
+            };
+
+            // Fast Coordinate Presets Helper
+            const applyPresetLocation = (name, state, lat, lon) => {
+                setNewCityName(name);
+                setNewCityState(state);
+                setNewCityLat(lat.toString());
+                setNewCityLon(lon.toString());
+                triggerToast(`Preset loaded for ${name}! Submit to add.`, "info");
+            };
+
+            // Handle logging in
+            const handleLoginSubmit = (e) => {
+                e.preventDefault();
+                if (!usernameInput) {
+                    triggerToast("Please enter a valid business username", "error");
+                    return;
+                }
+
+                const matchedCity = signupCity || "Surat";
+                const coords = hubs[matchedCity] || hubs["Surat"];
+
+                const mockUser = {
+                    name: usernameInput,
+                    business: `${usernameInput} Enterprises`,
+                    city: matchedCity,
+                    lat: coords.lat,
+                    lon: coords.lon,
+                    email: `${usernameInput.toLowerCase().replace(/\s+/g, '')}@texora.com`,
+                    phone: "+91 99991 23456"
+                };
+
+                setUser(mockUser);
+                setLoginModalOpen(false);
+                setUsernameInput("");
+                setPasswordInput("");
+                
+                triggerToast(`Welcome back, ${mockUser.name}! Your dynamic Texora hub is active.`, "success");
+
+                if (pendingAction) {
+                    setTimeout(() => {
+                        if (pendingAction.type === 'navigate') {
+                            setCurrentPage(pendingAction.page);
+                        } else {
+                            executeMessageSeller(pendingAction.seller, pendingAction.productName, mockUser);
+                        }
+                        setPendingAction(null);
+                    }, 500);
+                }
+            };
+
+            // Handle logging out
+            const handleLogout = () => {
+                setUser(null);
+                triggerToast("Logged out successfully.", "info");
+            };
+
+            // Core Trigger: Message Seller Flow
+            const handleMessageSellerTrigger = (sellerName, productName) => {
+                if (!user) {
+                    setPendingAction({ seller: sellerName, productName: productName });
+                    setLoginMessage(`Please log in to contact ${sellerName} about this fabric.`);
+                    setLoginModalOpen(true);
+                } else {
+                    executeMessageSeller(sellerName, productName, user);
+                }
+            };
+
+            // Execute actual chat initiation
+            const executeMessageSeller = (sellerName, productName, currentUser) => {
+                const existingChat = chats.find(c => c.seller === sellerName && c.productName === productName);
+
+                if (existingChat) {
+                    setActiveChatId(existingChat.id);
+                } else {
+                    const newChatId = Date.now();
+                    const welcomeMsg = `Hi ${sellerName}, I am interested in your listing '${productName}'. I am sourcing from ${currentUser.city}. Could you share logistics rates and ready stock availability?`;
+                    
+                    const newChat = {
+                        id: newChatId,
+                        seller: sellerName,
+                        productName: productName,
+                        messages: [
+                            { sender: "buyer", text: welcomeMsg, time: "Just Now" }
+                        ]
+                    };
+
+                    setChats([newChat, ...chats]);
+                    setActiveChatId(newChatId);
+
+                    // Auto-reply simulation
+                    setTimeout(() => {
+                        setChats(prevChats => 
+                            prevChats.map(c => {
+                                if (c.id === newChatId) {
+                                    return {
+                                        ...c,
+                                        messages: [
+                                            ...c.messages,
+                                            { 
+                                                sender: "seller", 
+                                                text: `Hello ${currentUser.name}! Thank you for reaching out to us on Texora. Yes, we have ready stock in our warehouse. Since you are in ${currentUser.city}, we can package and dispatch via our regular transport lines within 24 hours. How many meters do you require?`, 
+                                                time: "Just Now" 
+                                            }
+                                        ]
+                                    };
+                                }
+                                return c;
+                            })
+                        );
+                        triggerToast(`New message from ${sellerName}!`, "info");
+                    }, 2000);
+                }
+
+                setCurrentPage('chat');
+                triggerToast(`Opened chat with ${sellerName}`, "success");
+            };
+
+            // Handle sending custom chat message
+            const handleSendChatMessage = (chatId, text) => {
+                if (!text.trim()) return;
+
+                setChats(prev => prev.map(c => {
+                    if (c.id === chatId) {
+                        return {
+                            ...c,
+                            messages: [...c.messages, { sender: "buyer", text: text, time: "Just Now" }]
+                        };
+                    }
+                    return c;
+                }));
+
+                // Simulate smart AI auto-replies matching the item context
+                setTimeout(() => {
+                    setChats(prev => prev.map(c => {
+                        if (c.id === chatId) {
+                            return {
+                                ...c,
+                                messages: [...c.messages, { 
+                                    sender: "seller", 
+                                    text: `Perfect. Let me check the exact transportation slab for your cargo. If we load tomorrow, you'll receive the physical fabric invoice directly in your Texora dashboard.`, 
+                                    time: "Just Now" 
+                                }]
+                            };
+                        }
+                        return c;
+                    }));
+                }, 2500);
+            };
+
+            const handleCreateProduct = (e) => {
+                e.preventDefault();
+                if (!user) {
+                    triggerToast("Log in required to post fabric listings.", "error");
+                    return;
+                }
+                if (!newProductName || !newProductPrice || !newProductTransport) {
+                    triggerToast("Please fill all required parameters.", "error");
+                    return;
+                }
+
+                const newFabricObj = {
+                    id: Date.now(),
+                    name: newProductName,
+                    category: newProductCat,
+                    basePrice: parseFloat(newProductPrice),
+                    transportRate: parseFloat(newProductTransport),
+                    location: user.city,
+                    seller: user.business,
+                    sellerRating: 5.0,
+                    stock: 2500,
+                    description: newProductDesc || "Premium quality woven textiles certified for high-volume exports and industrial tailoring.",
+                    image: "bg-gradient-to-br from-indigo-700 to-slate-900",
+                    texturePattern: "geometric-grid"
+                };
+
+                setFabrics([newFabricObj, ...fabrics]);
+                triggerToast(`Fabric "${newProductName}" successfully listed in Texora Marketplace!`, "success");
+                
+                // Clear input fields
+                setNewProductName("");
+                setNewProductPrice("");
+                setNewProductTransport("");
+                setNewProductDesc("");
+                
+                // Jump back to marketplace to view it
+                setCurrentPage('marketplace');
+            };
+
+            const handleDeleteProduct = (productId) => {
+                setFabrics(prev => prev.filter(f => f.id !== productId));
+                triggerToast("Product removed from marketplace successfully.", "info");
+            };
+
+            return (
+                <div class="min-h-screen flex flex-col justify-between bg-slate-50/50">
+                    
+                    {/* --- BRAND INTRO SPLASH OVERLAY SCREEN --- */}
+                    {showIntro && (
+                        <div 
+                            key={introTriggerKey}
+                            class={`fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-50 select-none splash-overlay ${fadeOutIntro ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+                        >
+                            {/* Skip Button */}
+                            <button 
+                                onClick={skipIntro}
+                                class="absolute top-6 right-6 px-4 py-2 bg-slate-200/80 hover:bg-slate-300/80 text-slate-700 font-bold text-xs tracking-wider uppercase rounded-xl transition-all duration-200"
+                            >
+                                Skip Intro <i class="fa-solid fa-angles-right ml-1"></i>
+                            </button>
+
+                            {/* Main Animated Branding Wrapper */}
+                            <div class="flex items-center justify-center cursor-pointer" onClick={skipIntro} title="Click to skip">
+                                
+                                {/* Logo Mark (Spins in) */}
+                                <div class="animate-logo-enter w-24 h-24 bg-gradient-to-tr from-violet-600 to-indigo-600 rounded-3xl flex items-center justify-center text-white shadow-2xl shadow-indigo-300 shrink-0 z-10 relative">
+                                    <i class="fa-solid fa-circle-nodes text-5xl animate-icon-pulse"></i>
                                 </div>
-                                <div>
-                                    <h3 class="font-bold text-gray-900 text-sm" id="activeChatName">Aditya Patel</h3>
-                                    <p class="text-xs text-green-500 font-medium">Online</p>
+         
+                                {/* Text Content (Reveals after spin) */}
+                                <div class="animate-text-expand flex flex-col justify-center pb-1">
+                                    <h1 class="text-7xl font-black tracking-tight text-slate-900 leading-none mb-2">Texora</h1>
+                                    <span class="text-[13px] font-bold tracking-[0.25em] text-violet-600 uppercase">Logistics & Textile Exchange</span>
+                                </div>
+         
+                            </div>
+
+                            <p class="absolute bottom-8 text-[11px] font-semibold text-slate-400 uppercase tracking-[0.3em]">
+                                Digitalizing Wholesale Weaving Networks
+                            </p>
+                        </div>
+                    )}
+
+                    {/* TOAST SYSTEM */}
+                    {toast && (
+                        <div class="fixed top-20 right-4 z-50 flex items-center space-x-3 bg-slate-900 text-white px-5 py-3 rounded-xl shadow-2xl border border-slate-700 transform transition-all duration-300">
+                            <span class={`w-2.5 h-2.5 rounded-full ${toast.type === 'success' ? 'bg-emerald-400' : toast.type === 'error' ? 'bg-rose-500' : 'bg-blue-400'}`}></span>
+                            <p class="text-sm font-semibold">{toast.text}</p>
+                        </div>
+                    )}
+
+                    {/* HEADER REGION */}
+                    <header class="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-100 shadow-sm transition-all">
+                        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col md:flex-row items-center justify-between gap-4">
+                            
+                            {/* Logo & Brand Identity (Texora) - Click to replay splash */}
+                            <div class="flex items-center justify-between w-full md:w-auto">
+                                <div 
+                                    class="flex items-center space-x-2.5 cursor-pointer group" 
+                                    onClick={() => {
+                                        setCurrentPage('marketplace');
+                                        replayIntro();
+                                    }}
+                                    title="Click to replay introductory animation"
+                                >
+                                    <div class="w-10 h-10 bg-gradient-to-tr from-violet-600 to-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-200 group-hover:rotate-[360deg] transition-transform duration-700">
+                                        <i class="fa-solid fa-circle-nodes text-lg animate-pulse"></i>
+                                    </div>
+                                    <div>
+                                        <div class="flex items-center gap-1.5">
+                                            <h1 class="text-xl font-black tracking-tight text-slate-900">Texora</h1>
+                                            <span class="text-[9px] bg-slate-100 text-slate-500 border border-slate-200 px-1.5 rounded-md font-bold uppercase py-0.5 group-hover:bg-violet-50 group-hover:text-violet-600 transition-colors">Replay Intro</span>
+                                        </div>
+                                        <span class="text-[10px] font-bold tracking-wider text-violet-600 uppercase">Logistics & Textile Exchange</span>
+                                    </div>
+                                </div>
+
+                                {/* Quick login / user node on mobile */}
+                                <div class="flex items-center space-x-2 md:hidden">
+                                    {user ? (
+                                        <button onClick={() => setCurrentPage('account')} class="flex items-center space-x-1.5 bg-violet-50 text-violet-700 px-3 py-1.5 rounded-lg font-medium text-xs">
+                                            <i class="fa-solid fa-location-dot"></i>
+                                            <span>{user.city}</span>
+                                        </button>
+                                    ) : (
+                                        <button onClick={() => { setLoginMessage("Login to unlock premium trading features."); setLoginModalOpen(true); }} class="text-violet-600 p-2 hover:text-indigo-600">
+                                            <i class="fa-solid fa-circle-user text-xl"></i>
+                                        </button>
+                                    )}
                                 </div>
                             </div>
-                            <button class="text-gray-400 hover:text-gray-600"><i class="ph ph-dots-three-outline-vertical text-xl"></i></button>
+
+                            {/* Search Bar at Top */}
+                            <div class="w-full md:max-w-lg relative">
+                                <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
+                                    <i class="fa-solid fa-magnifying-glass text-sm"></i>
+                                </span>
+                                <input
+                                    type="text"
+                                    placeholder="Search by fabric name, materials, or seller hubs..."
+                                    class="w-full pl-10 pr-4 py-2.5 bg-slate-100 border-0 focus:bg-white focus:ring-2 focus:ring-violet-500 rounded-xl text-sm font-medium text-slate-800 placeholder-slate-400 outline-none transition-all duration-200"
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                />
+                                {searchQuery && (
+                                    <button 
+                                        onClick={() => setSearchQuery('')}
+                                        class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600"
+                                    >
+                                        <i class="fa-solid fa-circle-xmark"></i>
+                                    </button>
+                                )}
+                            </div>
+
+                            {/* Global Session Indicator and Auth Access Button */}
+                            <div class="hidden md:flex items-center space-x-4">
+                                
+                                {/* Distance Calibration Indicator */}
+                                <div class="flex flex-col items-end">
+                                    <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Sourcing Hub</span>
+                                    <div class="flex items-center space-x-1">
+                                        <i class="fa-solid fa-truck-fast text-emerald-500 text-xs"></i>
+                                        <span class="text-xs font-bold text-slate-700">Calculated from:</span>
+                                        <span class="text-xs font-extrabold text-violet-600 bg-violet-50 px-2 py-0.5 rounded">
+                                            {user ? user.city : "Surat"}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* Active Session / Login Trigger */}
+                                {user ? (
+                                    <div class="flex items-center space-x-3 border-l pl-4 border-slate-200">
+                                        <div class="text-right">
+                                            <p class="text-xs font-extrabold text-slate-800">{user.name}</p>
+                                            <p class="text-[10px] text-slate-500 truncate max-w-[150px]">{user.business}</p>
+                                        </div>
+                                        <div 
+                                            class="w-10 h-10 bg-violet-100 border-2 border-violet-200 text-violet-700 rounded-xl flex items-center justify-center cursor-pointer hover:bg-violet-200 transition-colors"
+                                            onClick={() => setCurrentPage('account')}
+                                            title="View Profile Details"
+                                        >
+                                            <span class="font-bold text-sm">{user.name.split(' ').map(n=>n[0]).join('')}</span>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <button 
+                                        onClick={() => { setLoginMessage("Welcome to Texora. Sign in to message weavers and calculate logistics."); setLoginModalOpen(true); }}
+                                        class="bg-violet-600 hover:bg-violet-700 text-white font-semibold text-xs py-2 px-4 rounded-xl flex items-center space-x-2 shadow-md hover:shadow-lg transition-all"
+                                    >
+                                        <i class="fa-solid fa-right-to-bracket"></i>
+                                        <span>Sign In / Register</span>
+                                    </button>
+                                )}
+                            </div>
+
                         </div>
+                    </header>
+
+                    {/* MAIN APPLICATION ROUTING SCREEN */}
+                    <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full">
                         
-                        <!-- Chat Messages -->
-                        <div class="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50/50" id="chatMessages">
-                            <!-- Populated by JS -->
-                        </div>
-                        
-                        <!-- Chat Input -->
-                        <div class="p-4 border-t border-gray-200 bg-white">
-                            <div class="flex items-center gap-2">
-                                <button class="text-gray-400 hover:text-brand-600 p-2"><i class="ph ph-paperclip text-xl"></i></button>
-                                <input type="text" id="chatInputMessage" placeholder="Type your message..." class="flex-1 border border-gray-300 rounded-full px-4 py-2 text-sm outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500" onkeypress="handleChatEnter(event)">
-                                <button onclick="sendChatMessage()" class="bg-brand-600 text-white h-10 w-10 rounded-full flex items-center justify-center hover:bg-brand-700 transition">
-                                    <i class="ph-fill ph-paper-plane-right"></i>
+                        {/* ALERT FOR NON-LOGGED IN VIEWERS */}
+                        {!user && currentPage !== 'about' && (
+                            <div class="mb-6 p-4 bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl border border-amber-200/60 flex items-center justify-between gap-4 flex-wrap">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-9 h-9 bg-amber-100 text-amber-700 rounded-lg flex items-center justify-center">
+                                        <i class="fa-solid fa-triangle-exclamation"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="text-xs font-bold text-slate-800">Viewing as Anonymous Sourcing Buyer</h4>
+                                        <p class="text-[11px] text-slate-600">Freight routing calculations are automatically assuming **Surat** as your shipping destination port. Sign in to configure custom hubs.</p>
+                                    </div>
+                                </div>
+                                <button 
+                                    onClick={() => { setLoginMessage("Sign in to calibrate your actual geographic logistics network."); setLoginModalOpen(true); }}
+                                    class="bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg"
+                                >
+                                    Log In Setup
                                 </button>
                             </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+                        )}
 
-            <!-- 4. ACCOUNT VIEW -->
-            <div id="view-account" class="absolute inset-0 overflow-y-auto p-6 fade-in hidden">
-                <div class="max-w-3xl mx-auto">
-                    <h1 class="text-2xl font-bold text-gray-900 mb-6">Account Settings</h1>
-                    
-                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                        <div class="p-6 border-b border-gray-200 flex items-center gap-6">
-                            <div class="h-20 w-20 rounded-full bg-brand-100 text-brand-600 flex items-center justify-center font-bold text-3xl border-2 border-brand-200" id="accountInitial">
-                                J
-                            </div>
+                        {/* PAGE 1: MARKETPLACE HOME */}
+                        {currentPage === 'marketplace' && (
                             <div>
-                                <h2 class="text-xl font-bold text-gray-900" id="accountNameTitle">John Doe</h2>
-                                <p class="text-gray-500" id="accountBusinessTitle">Doe Textiles Ltd.</p>
-                                <button class="mt-2 text-sm text-brand-600 font-medium hover:underline">Change Avatar</button>
+                                {/* Filtering and Sorting Header Bar */}
+                                <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm mb-6 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                                    
+                                    {/* Category Filter Chips */}
+                                    <div class="flex items-center space-x-2 overflow-x-auto pb-2 lg:pb-0 scrollbar-none">
+                                        <span class="text-xs font-bold text-slate-500 uppercase mr-2 shrink-0">Fabric:</span>
+                                        {['All', 'Cotton', 'Silk', 'Denim', 'Linen', 'Knit', 'Synthetic'].map(cat => (
+                                            <button
+                                                key={cat}
+                                                onClick={() => setSelectedCategory(cat)}
+                                                class={`px-3.5 py-1.5 rounded-full text-xs font-semibold shrink-0 transition-all ${
+                                                    selectedCategory === cat 
+                                                    ? 'bg-violet-600 text-white shadow-md shadow-indigo-100' 
+                                                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                                }`}
+                                            >
+                                                {cat}
+                                            </button>
+                                        ))}
+                                    </div>
+
+                                    {/* Sort Controls */}
+                                    <div class="flex items-center space-x-3">
+                                        <span class="text-xs font-bold text-slate-500 uppercase shrink-0">Sort By:</span>
+                                        <select 
+                                            class="bg-slate-100 text-slate-700 text-xs font-bold rounded-xl px-3 py-2 border-0 outline-none focus:ring-2 focus:ring-violet-500 cursor-pointer"
+                                            value={sortBy}
+                                            onChange={(e) => setSortBy(e.target.value)}
+                                        >
+                                            <option value="nearest">Nearest Distance (km)</option>
+                                            <option value="lowest-delivered">Lowest Delivered Price (Base + Transport)</option>
+                                            <option value="highest-delivered">Highest Delivered Price (Base + Transport)</option>
+                                            <option value="lowest-base">Lowest Base Price (Ex-Factory)</option>
+                                            <option value="highest-base">Highest Base Price (Ex-Factory)</option>
+                                            <option value="rating">Top Rated Sellers</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                {/* Active Filters summary info */}
+                                <div class="mb-4 flex items-center justify-between text-xs text-slate-500 font-medium px-1">
+                                    <p>Showing <span class="font-bold text-slate-800">{filteredFabrics.length}</span> fabrics near you</p>
+                                    {searchQuery && <p>Filtered by search: "<span class="italic text-violet-600">{searchQuery}</span>"</p>}
+                                </div>
+
+                                {/* Grid of Fabrics */}
+                                {filteredFabrics.length === 0 ? (
+                                    <div class="text-center py-16 bg-white rounded-3xl border border-dashed border-slate-200 p-8">
+                                        <i class="fa-solid fa-basket-shopping text-4xl text-slate-300 mb-3"></i>
+                                        <h3 class="text-base font-bold text-slate-800">No textiles matching your filters found</h3>
+                                        <p class="text-xs text-slate-500 max-w-sm mx-auto mt-1">Try expanding your categories, altering the sorting rules, or clearing your active search bar parameters.</p>
+                                        <button onClick={() => { setSearchQuery(''); setSelectedCategory('All'); }} class="mt-4 bg-violet-600 text-white text-xs font-bold px-4 py-2 rounded-xl">
+                                            Reset Filters
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                        {filteredFabrics.map(fabric => {
+                                            const isUserListing = user && fabric.seller === user.business;
+
+                                            return (
+                                                <div 
+                                                    key={fabric.id}
+                                                    class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden hover:shadow-xl hover:scale-[1.01] transition-all duration-300 flex flex-col justify-between"
+                                                >
+                                                    {/* Card Header & Decorative Texture Representation */}
+                                                    <div class="relative h-44 overflow-hidden">
+                                                        <div class={`absolute inset-0 ${fabric.image} flex flex-col justify-between p-4 text-white`}>
+                                                            
+                                                            {/* Material badge & Location Hub indicator */}
+                                                            <div class="flex items-center justify-between">
+                                                                <span class="bg-white/20 backdrop-blur-md px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase tracking-wide">
+                                                                    {fabric.category}
+                                                                </span>
+                                                                <span class="bg-indigo-950/40 backdrop-blur-md px-2.5 py-1 rounded-lg text-[10px] font-bold flex items-center space-x-1">
+                                                                    <i class="fa-solid fa-location-dot text-rose-400"></i>
+                                                                    <span>{fabric.location}</span>
+                                                                </span>
+                                                            </div>
+
+                                                            {/* Abstract Geometric patterns representing woven warp/weft */}
+                                                            <div class="absolute inset-0 opacity-10 pointer-events-none flex flex-wrap gap-1 p-2">
+                                                                {Array.from({ length: 40 }).map((_, i) => (
+                                                                    <div key={i} class="w-4 h-4 border border-white rounded-sm"></div>
+                                                                ))}
+                                                            </div>
+
+                                                            {/* Price Breakdown Preview */}
+                                                            <div class="z-10 mt-auto">
+                                                                <p class="text-[10px] text-white/70 font-bold uppercase tracking-widest">Base Rate (Ex-Factory)</p>
+                                                                <p class="text-2xl font-black">₹{fabric.basePrice}<span class="text-xs font-normal"> / meter</span></p>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* User tag if it belongs to current active user */}
+                                                        {isUserListing && (
+                                                            <span class="absolute top-3 right-3 bg-violet-600 text-white font-extrabold text-[9px] px-2 py-1 rounded-md shadow-md animate-bounce">
+                                                                YOUR LISTING
+                                                            </span>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Card Body */}
+                                                    <div class="p-5 flex-grow flex flex-col justify-between">
+                                                        
+                                                        {/* Seller Info & Ratings */}
+                                                        <div>
+                                                            <div class="flex items-center justify-between mb-2">
+                                                                <p class="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider truncate max-w-[70%]">
+                                                                    {fabric.seller}
+                                                                </p>
+                                                                <div class="flex items-center space-x-1 bg-amber-50 text-amber-600 px-1.5 py-0.5 rounded text-[10px] font-bold">
+                                                                    <i class="fa-solid fa-star"></i>
+                                                                    <span>{fabric.sellerRating}</span>
+                                                                </div>
+                                                            </div>
+
+                                                            <h3 class="text-sm font-bold text-slate-800 line-clamp-1 mb-2 hover:text-violet-600 transition-colors">
+                                                                {fabric.name}
+                                                            </h3>
+                                                            
+                                                            <p class="text-xs text-slate-500 line-clamp-2 mb-4">
+                                                                {fabric.description}
+                                                            </p>
+                                                        </div>
+
+                                                        {/* Real distance and logistics costs */}
+                                                        <div class="bg-slate-50 rounded-xl p-3 border border-slate-100 text-xs mb-4">
+                                                            <div class="flex justify-between items-center mb-1.5 text-slate-500">
+                                                                <span>Freight Route:</span>
+                                                                <span class="font-bold text-slate-700">
+                                                                    {fabric.location} &rarr; {user ? user.city : "Surat"}
+                                                                </span>
+                                                            </div>
+                                                            <div class="flex justify-between items-center mb-1.5 text-slate-500">
+                                                                <span>Hub Distance:</span>
+                                                                <span class="font-bold text-slate-700">{fabric.calculatedDistance} km</span>
+                                                            </div>
+                                                            <div class="flex justify-between items-center mb-2.5 text-slate-500">
+                                                                <span>Transport Cost (₹{fabric.transportRate}/km/m):</span>
+                                                                <span class="font-bold text-emerald-600">+₹{fabric.transportCost}</span>
+                                                            </div>
+                                                            <div class="border-t border-slate-200/60 pt-2 flex justify-between items-center">
+                                                                <span class="font-bold text-slate-800 text-xs uppercase">Delivered Price:</span>
+                                                                <span class="text-sm font-black text-violet-600">
+                                                                    ₹{fabric.deliveredPrice} <span class="text-[10px] font-normal text-slate-500">/ meter</span>
+                                                                </span>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Action Footer */}
+                                                        <div class="flex items-center justify-between gap-2 pt-2 border-t border-slate-100">
+                                                            <span class="text-[10px] font-bold text-slate-400">
+                                                                Stock: {fabric.stock.toLocaleString()} m
+                                                            </span>
+
+                                                            {isUserListing ? (
+                                                                <button 
+                                                                    onClick={() => handleDeleteProduct(fabric.id)}
+                                                                    class="bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-bold px-3 py-1.5 rounded-lg transition-colors flex items-center space-x-1"
+                                                                >
+                                                                    <i class="fa-solid fa-trash-can"></i>
+                                                                    <span>Delete</span>
+                                                                </button>
+                                                            ) : (
+                                                                <button 
+                                                                    onClick={() => handleMessageSellerTrigger(fabric.seller, fabric.name)}
+                                                                    class="bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition-all shadow-md shadow-indigo-100 flex items-center space-x-1.5"
+                                                                >
+                                                                    <i class="fa-solid fa-comments"></i>
+                                                                    <span>Message Seller</span>
+                                                                </button>
+                                                            )}
+                                                        </div>
+
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
                             </div>
-                        </div>
+                        )}
+
+                        {/* PAGE 2: MY PRODUCTS (Manage your own items) */}
+                        {currentPage === 'my-products' && (
+                            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                                
+                                {/* Form Column */}
+                                <div class="lg:col-span-1">
+                                    <div class="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm sticky top-28">
+                                        <div class="flex items-center space-x-2 text-violet-600 mb-4">
+                                            <i class="fa-solid fa-box-open text-lg"></i>
+                                            <h2 class="text-base font-bold text-slate-800">Add Fabric for Sale</h2>
+                                        </div>
+                                        <p class="text-xs text-slate-500 mb-4">
+                                            List your stock instantly. Other traders will see your price adjusted automatically based on their distance from your location hub (**{user ? user.city : "Surat"}**).
+                                        </p>
+
+                                        {!user ? (
+                                            <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 text-center">
+                                                <i class="fa-solid fa-lock text-slate-400 text-lg mb-2"></i>
+                                                <p class="text-xs font-bold text-slate-700 mb-2">Authentication Required</p>
+                                                <button 
+                                                    onClick={() => { setLoginMessage("Sign in to begin posting listings."); setLoginModalOpen(true); }}
+                                                    class="bg-violet-600 text-white font-bold text-xs py-1.5 px-3 rounded-lg"
+                                                >
+                                                    Login Now
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <form onSubmit={handleCreateProduct} class="space-y-4">
+                                                <div>
+                                                    <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Fabric Name *</label>
+                                                    <input 
+                                                        type="text"
+                                                        placeholder="e.g. Supima Cotton Double Knit Jersey"
+                                                        class="w-full text-xs font-medium p-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-violet-500 rounded-lg outline-none"
+                                                        value={newProductName}
+                                                        onChange={(e) => setNewProductName(e.target.value)}
+                                                        required
+                                                    />
+                                                </div>
+
+                                                <div class="grid grid-cols-2 gap-3">
+                                                    <div>
+                                                        <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Category *</label>
+                                                        <select 
+                                                            class="w-full text-xs font-medium p-2.5 bg-slate-50 border border-slate-200 rounded-lg cursor-pointer"
+                                                            value={newProductCat}
+                                                            onChange={(e) => setNewProductCat(e.target.value)}
+                                                        >
+                                                            {['Cotton', 'Silk', 'Denim', 'Linen', 'Knit', 'Synthetic'].map(c => (
+                                                                <option key={c} value={c}>{c}</option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                    <div>
+                                                        <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Base Price (₹/m) *</label>
+                                                        <input 
+                                                            type="number"
+                                                            placeholder="Ex-Factory Rate"
+                                                            class="w-full text-xs font-medium p-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-violet-500 rounded-lg outline-none"
+                                                            value={newProductPrice}
+                                                            onChange={(e) => setNewProductPrice(e.target.value)}
+                                                            required
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                <div>
+                                                    <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Transport Rate per km (₹) *</label>
+                                                    <input 
+                                                        type="number"
+                                                        step="0.01"
+                                                        placeholder="Freight rate per km per meter (e.g., 0.15)"
+                                                        class="w-full text-xs font-medium p-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-violet-500 rounded-lg outline-none"
+                                                        value={newProductTransport}
+                                                        onChange={(e) => setNewProductTransport(e.target.value)}
+                                                        required
+                                                    />
+                                                </div>
+
+                                                <div>
+                                                    <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Brief Description</label>
+                                                    <textarea 
+                                                        rows="3"
+                                                        placeholder="Describe quality, certification, weave details..."
+                                                        class="w-full text-xs font-medium p-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-violet-500 rounded-lg outline-none resize-none"
+                                                        value={newProductDesc}
+                                                        onChange={(e) => setNewProductDesc(e.target.value)}
+                                                    />
+                                                </div>
+
+                                                <button
+                                                    type="submit"
+                                                    class="w-full bg-violet-600 hover:bg-violet-700 text-white font-bold text-xs py-2.5 rounded-xl transition-all shadow-md shadow-indigo-100 flex items-center justify-center space-x-2"
+                                                >
+                                                    <i class="fa-solid fa-circle-plus"></i>
+                                                    <span>Publish Fabric Listing</span>
+                                                </button>
+                                            </form>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Active Listings Management Column */}
+                                <div class="lg:col-span-2 space-y-4">
+                                    <div class="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm">
+                                        <h2 class="text-base font-bold text-slate-800 mb-2">My Active Marketplace Listings</h2>
+                                        <p class="text-xs text-slate-500 mb-6">Currently showing textiles owned and published by your business profile.</p>
+
+                                        {user ? (
+                                            (() => {
+                                                const userListings = fabrics.filter(f => f.seller === user.business);
+                                                if (userListings.length === 0) {
+                                                    return (
+                                                        <div class="text-center py-12 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                                                            <i class="fa-solid fa-folder-open text-3xl text-slate-300 mb-2"></i>
+                                                            <p class="text-xs font-bold text-slate-700">No active fabrics found</p>
+                                                            <p class="text-[11px] text-slate-500 max-w-xs mx-auto mt-1">Fill out the left-side form parameters to populate fabrics registered under your company logo.</p>
+                                                        </div>
+                                                    );
+                                                }
+                                                return (
+                                                    <div class="space-y-4">
+                                                        {userListings.map(item => (
+                                                            <div key={item.id} class="p-4 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-between gap-4 flex-wrap">
+                                                                <div class="flex items-center space-x-3 min-w-[200px]">
+                                                                    <div class="w-10 h-10 rounded-lg bg-violet-600 flex items-center justify-center text-white font-extrabold text-xs">
+                                                                        {item.category[0]}
+                                                                    </div>
+                                                                    <div>
+                                                                        <h4 class="text-xs font-bold text-slate-800">{item.name}</h4>
+                                                                        <p class="text-[10px] text-slate-500">Ex-Factory Base Price: ₹{item.basePrice}/meter</p>
+                                                                    </div>
+                                                                </div>
+
+                                                                <div class="text-right text-xs">
+                                                                    <p class="font-bold text-slate-700">Location: {item.location}</p>
+                                                                    <p class="text-[10px] text-slate-500">Freight Multiplier: ₹{item.transportRate}/km</p>
+                                                                </div>
+
+                                                                <button 
+                                                                    onClick={() => handleDeleteProduct(item.id)}
+                                                                    class="bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold text-xs px-3 py-1.5 rounded-lg flex items-center space-x-1"
+                                                                >
+                                                                    <i class="fa-solid fa-trash-can"></i>
+                                                                    <span>Remove Item</span>
+                                                                </button>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                );
+                                            })()
+                                        ) : (
+                                            <div class="text-center py-12">
+                                                <p class="text-xs font-semibold text-slate-400">Please sign in to view and manage your fabric stock.</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                            </div>
+                        )}
+
+                        {/* PAGE 3: CHAT ROOMS & REAL-TIME NEGOTIATOR */}
+                        {currentPage === 'chat' && (
+                            <div class="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden min-h-[500px] grid grid-cols-1 md:grid-cols-3">
+                                
+                                {/* Thread Selector */}
+                                <div class="md:col-span-1 border-r border-slate-100 flex flex-col">
+                                    <div class="p-4 border-b border-slate-100 bg-slate-50/50">
+                                        <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Active Conversations</h3>
+                                    </div>
+                                    <div class="flex-grow overflow-y-auto divide-y divide-slate-100/60">
+                                        {chats.map(chat => {
+                                            const isActive = activeChatId === chat.id;
+                                            const lastMsg = chat.messages[chat.messages.length - 1];
+
+                                            return (
+                                                <div
+                                                    key={chat.id}
+                                                    onClick={() => setActiveChatId(chat.id)}
+                                                    class={`p-4 cursor-pointer transition-colors flex items-start space-x-3 ${isActive ? 'bg-violet-50/70 border-l-4 border-violet-600' : 'hover:bg-slate-50'}`}
+                                                >
+                                                    <div class="w-8 h-8 rounded-lg bg-violet-100 text-violet-700 font-bold text-xs flex items-center justify-center shrink-0">
+                                                        {chat.seller.split(' ').map(n=>n[0]).join('')}
+                                                    </div>
+                                                    <div class="flex-grow min-w-0">
+                                                        <div class="flex items-center justify-between mb-1">
+                                                            <h4 class="text-xs font-bold text-slate-800 truncate">{chat.seller}</h4>
+                                                            <span class="text-[9px] text-slate-400 shrink-0">{lastMsg ? lastMsg.time : ""}</span>
+                                                        </div>
+                                                        <p class="text-[10px] text-violet-600 font-semibold mb-1 truncate">{chat.productName}</p>
+                                                        <p class="text-[11px] text-slate-500 truncate">{lastMsg ? lastMsg.text : "No messages yet"}</p>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                        {chats.length === 0 && (
+                                            <div class="p-6 text-center text-xs text-slate-400">
+                                                No ongoing chats. Click "Message Seller" on any fabric in the marketplace to start a deal.
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Active Conversation Frame */}
+                                <div class="md:col-span-2 flex flex-col justify-between h-[500px]">
+                                    {(() => {
+                                        const currentChat = chats.find(c => c.id === activeChatId);
+                                        if (!currentChat) {
+                                            return (
+                                                <div class="flex flex-col items-center justify-center h-full p-8 text-center bg-slate-50/30">
+                                                    <div class="w-12 h-12 bg-violet-50 text-violet-600 rounded-2xl flex items-center justify-center mb-3">
+                                                        <i class="fa-solid fa-comments text-lg"></i>
+                                                    </div>
+                                                    <h3 class="text-sm font-bold text-slate-800">No Thread Selected</h3>
+                                                    <p class="text-xs text-slate-500 max-w-xs mt-1">Select an active trader conversation on the left panel or navigate fabrics to click "Message Seller".</p>
+                                                </div>
+                                            );
+                                        }
+
+                                        return (
+                                            <React.Fragment>
+                                                {/* Active Header */}
+                                                <div class="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                                                    <div>
+                                                        <h3 class="text-xs font-extrabold text-slate-800">{currentChat.seller}</h3>
+                                                        <p class="text-[10px] text-violet-600 font-semibold mt-0.5">Regarding: {currentChat.productName}</p>
+                                                    </div>
+                                                    <span class="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full flex items-center space-x-1.5">
+                                                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 pulse-accent"></span>
+                                                        <span>Online (Trader)</span>
+                                                    </span>
+                                                </div>
+
+                                                {/* Messages Scrollbox */}
+                                                <div class="flex-grow p-4 overflow-y-auto space-y-3 bg-slate-50/30">
+                                                    {currentChat.messages.map((msg, i) => {
+                                                        const isBuyer = msg.sender === 'buyer';
+                                                        return (
+                                                            <div key={i} class={`flex ${isBuyer ? 'justify-end' : 'justify-start'}`}>
+                                                                <div class={`max-w-[75%] p-3.5 rounded-2xl text-xs leading-relaxed ${
+                                                                    isBuyer 
+                                                                    ? 'bg-violet-600 text-white rounded-br-none shadow-md shadow-indigo-100' 
+                                                                    : 'bg-white text-slate-700 border border-slate-100 rounded-bl-none shadow-sm'
+                                                                }`}>
+                                                                    <p>{msg.text}</p>
+                                                                    <span class={`block text-[8px] mt-1.5 text-right ${isBuyer ? 'text-white/75' : 'text-slate-400'}`}>
+                                                                        {msg.time}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+
+                                                {/* Chat Input Field */}
+                                                <div class="p-4 border-t border-slate-100 bg-white">
+                                                    <form 
+                                                        onSubmit={(e) => {
+                                                            e.preventDefault();
+                                                            const text = e.target.msgText.value;
+                                                            handleSendChatMessage(currentChat.id, text);
+                                                            e.target.reset();
+                                                        }}
+                                                        class="flex items-center gap-2"
+                                                    >
+                                                        <input 
+                                                            name="msgText"
+                                                            type="text"
+                                                            placeholder="Type your quotation, discount queries, or delivery requirements..."
+                                                            class="flex-grow text-xs font-medium p-3 bg-slate-100 focus:bg-white border-0 focus:ring-2 focus:ring-violet-500 rounded-xl outline-none"
+                                                            autoComplete="off"
+                                                        />
+                                                        <button 
+                                                            type="submit"
+                                                            class="bg-violet-600 hover:bg-violet-700 text-white p-3 rounded-xl transition-all shadow-md shadow-indigo-100 shrink-0"
+                                                        >
+                                                            <i class="fa-solid fa-paper-plane text-xs"></i>
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            </React.Fragment>
+                                        );
+                                    })()}
+                                </div>
+
+                            </div>
+                        )}
+
+                        {/* PAGE 4: ACCOUNT SETTINGS & LOGISTICS CONFIGURATION */}
+                        {currentPage === 'account' && (
+                            <div class="max-w-4xl mx-auto space-y-6">
+                                
+                                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                    
+                                    {/* Left Panel: Profile Info and Pre-existing hubs list */}
+                                    <div class="bg-white rounded-3xl border border-slate-100 p-6 md:p-8 shadow-sm space-y-6">
+                                        <div class="flex items-center space-x-4">
+                                            <div class="w-16 h-16 bg-gradient-to-tr from-violet-600 to-indigo-500 rounded-2xl flex items-center justify-center text-white font-black text-2xl shadow-lg">
+                                                {user ? user.name.split(' ').map(n=>n[0]).join('') : "A"}
+                                            </div>
+                                            <div>
+                                                <h2 class="text-lg font-bold text-slate-800">{user ? user.name : "Anonymous Account"}</h2>
+                                                <p class="text-xs text-violet-600 font-bold">{user ? user.business : "Unregistered Guest Trader"}</p>
+                                            </div>
+                                        </div>
+
+                                        {/* Select Active Warehousing Port */}
+                                        <div class="bg-violet-50/50 rounded-2xl border border-violet-100/50 p-5">
+                                            <div class="flex items-center space-x-2 text-violet-600 mb-3">
+                                                <i class="fa-solid fa-map-location-dot text-sm"></i>
+                                                <h3 class="text-xs font-bold uppercase tracking-wider">Trading & Logistics Base</h3>
+                                            </div>
+                                            <p class="text-xs text-slate-500 mb-4">
+                                                Select your active logistics hub. All platform transportation distances, routes, and ex-factory prices update instantly around your hub's coordinates.
+                                            </p>
+
+                                            <div>
+                                                <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-2">Select Active Hub Port</label>
+                                                <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-64 overflow-y-auto p-1 border rounded-lg bg-white/70">
+                                                    {Object.keys(hubs).map(cityName => (
+                                                        <button
+                                                            key={cityName}
+                                                            onClick={() => handleLocationChange(cityName)}
+                                                            type="button"
+                                                            class={`px-3 py-2 rounded-xl text-xs font-bold transition-all flex flex-col items-center justify-center gap-1 ${
+                                                                user && user.city === cityName
+                                                                ? 'bg-violet-600 text-white shadow-md'
+                                                                : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200/80'
+                                                            }`}
+                                                        >
+                                                            <span class="truncate max-w-[85px]">{cityName}</span>
+                                                            <span class={`text-[8px] font-normal ${user && user.city === cityName ? 'text-violet-200' : 'text-slate-400'}`}>
+                                                                {hubs[cityName].state}
+                                                            </span>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Profile Fields Overview */}
+                                        <div class="space-y-4">
+                                            <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest border-b pb-2">Business Documentation</h3>
+                                            <div class="grid grid-cols-2 gap-4">
+                                                <div>
+                                                    <p class="text-[10px] text-slate-400 font-bold">EMAIL ADDRESS</p>
+                                                    <p class="text-xs font-medium text-slate-700">{user ? user.email : "N/A"}</p>
+                                                </div>
+                                                <div>
+                                                    <p class="text-[10px] text-slate-400 font-bold">CONTACT NUMBER</p>
+                                                    <p class="text-xs font-medium text-slate-700">{user ? user.phone : "N/A"}</p>
+                                                </div>
+                                                <div>
+                                                    <p class="text-[10px] text-slate-400 font-bold">GST REGISTRATION</p>
+                                                    <p class="text-xs font-bold text-emerald-600">{user ? "24AAAFF1112C1Z2 (Active)" : "N/A"}</p>
+                                                </div>
+                                                <div>
+                                                    <p class="text-[10px] text-slate-400 font-bold">PLATFORM BADGE</p>
+                                                    <p class="text-xs font-medium text-slate-700">Verified Sourcing Partner</p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Action Footers */}
+                                        <div class="pt-6 border-t border-slate-100 flex items-center justify-between">
+                                            <span class="text-[10px] font-semibold text-slate-400">Texora v2.4 Premium</span>
+                                            {user ? (
+                                                <button 
+                                                    onClick={handleLogout}
+                                                    class="bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-bold py-2 px-4 rounded-xl transition-all"
+                                                >
+                                                    Log Out Securely
+                                                </button>
+                                            ) : (
+                                                <button 
+                                                    onClick={() => { setLoginMessage("Login to configure custom profile credentials."); setLoginModalOpen(true); }}
+                                                    class="bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold py-2 px-4 rounded-xl transition-all"
+                                                >
+                                                    Log In Setup
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Right Panel: Add Custom Location Hub Form */}
+                                    <div class="bg-white rounded-3xl border border-slate-100 p-6 md:p-8 shadow-sm flex flex-col justify-between">
+                                        <div>
+                                            <div class="flex items-center space-x-2 text-violet-600 mb-3">
+                                                <i class="fa-solid fa-circle-plus text-lg"></i>
+                                                <h3 class="text-base font-extrabold text-slate-800">Add Custom Textile Hub</h3>
+                                            </div>
+                                            <p class="text-xs text-slate-500 mb-6">
+                                                Cannot find your home city? Add custom geographical coordinates here to compute real-time routing freight distances immediately on all marketplace listings.
+                                            </p>
+
+                                            {/* Pre-populated Quick Preset Badges */}
+                                            <div class="mb-6">
+                                                <span class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Popular Sourcing Clusters Presets</span>
+                                                <div class="flex flex-wrap gap-1.5">
+                                                    <button 
+                                                        type="button"
+                                                        onClick={() => applyPresetLocation("Tiruppur", "Tamil Nadu", 11.1085, 77.3411)}
+                                                        class="bg-slate-50 hover:bg-slate-100 border text-[11px] font-medium text-slate-600 px-2.5 py-1 rounded-lg"
+                                                    >
+                                                        Tiruppur (Knitwear)
+                                                    </button>
+                                                    <button 
+                                                        type="button"
+                                                        onClick={() => applyPresetLocation("Varanasi", "Uttar Pradesh", 25.3176, 82.9739)}
+                                                        class="bg-slate-50 hover:bg-slate-100 border text-[11px] font-medium text-slate-600 px-2.5 py-1 rounded-lg"
+                                                    >
+                                                        Varanasi (Silk)
+                                                    </button>
+                                                    <button 
+                                                        type="button"
+                                                        onClick={() => applyPresetLocation("Solapur", "Maharashtra", 17.6599, 75.9064)}
+                                                        class="bg-slate-50 hover:bg-slate-100 border text-[11px] font-medium text-slate-600 px-2.5 py-1 rounded-lg"
+                                                    >
+                                                        Solapur (Terry Towel)
+                                                    </button>
+                                                    <button 
+                                                        type="button"
+                                                        onClick={() => applyPresetLocation("Salem", "Tamil Nadu", 11.6643, 78.1460)}
+                                                        class="bg-slate-50 hover:bg-slate-100 border text-[11px] font-medium text-slate-600 px-2.5 py-1 rounded-lg"
+                                                    >
+                                                        Salem (Weaving)
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            {/* Core Manual Coordinate Form */}
+                                            <form onSubmit={handleAddLocation} class="space-y-4">
+                                                <div class="grid grid-cols-2 gap-3">
+                                                    <div>
+                                                        <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">City Name *</label>
+                                                        <input 
+                                                            type="text"
+                                                            placeholder="e.g. Solapur"
+                                                            class="w-full text-xs font-semibold p-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-violet-500 rounded-lg outline-none"
+                                                            value={newCityName}
+                                                            onChange={(e) => setNewCityName(e.target.value)}
+                                                            required
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">State *</label>
+                                                        <input 
+                                                            type="text"
+                                                            placeholder="e.g. Maharashtra"
+                                                            class="w-full text-xs font-semibold p-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-violet-500 rounded-lg outline-none"
+                                                            value={newCityState}
+                                                            onChange={(e) => setNewCityState(e.target.value)}
+                                                            required
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                <div class="grid grid-cols-2 gap-3">
+                                                    <div>
+                                                        <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Latitude (-90 to 90) *</label>
+                                                        <input 
+                                                            type="number"
+                                                            step="0.0001"
+                                                            placeholder="e.g. 17.6599"
+                                                            class="w-full text-xs font-semibold p-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-violet-500 rounded-lg outline-none"
+                                                            value={newCityLat}
+                                                            onChange={(e) => setNewCityLat(e.target.value)}
+                                                            required
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Longitude (-180 to 180) *</label>
+                                                        <input 
+                                                            type="number"
+                                                            step="0.0001"
+                                                            placeholder="e.g. 75.9064"
+                                                            class="w-full text-xs font-semibold p-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-violet-500 rounded-lg outline-none"
+                                                            value={newCityLon}
+                                                            onChange={(e) => setNewCityLon(e.target.value)}
+                                                            required
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                <button
+                                                    type="submit"
+                                                    class="w-full bg-violet-600 hover:bg-violet-700 text-white font-bold text-xs py-2.5 rounded-xl transition-all shadow-md shadow-indigo-100 flex items-center justify-center space-x-2"
+                                                >
+                                                    <i class="fa-solid fa-map-pin"></i>
+                                                    <span>Register Custom Sourcing Hub</span>
+                                                </button>
+                                            </form>
+                                        </div>
+
+                                        <div class="mt-6 p-4 bg-emerald-50 rounded-2xl border border-emerald-100/50">
+                                            <p class="text-[11px] text-emerald-800 leading-relaxed">
+                                                <i class="fa-solid fa-circle-info mr-1"></i>
+                                                Registered hubs are fully persistent across page tabs and selectable for all ex-factory rate conversions instantly.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                </div>
+
+                            </div>
+                        )}
+
+                        {/* PAGE 5: ABOUT PLATFORM MECHANICS */}
+                        {currentPage === 'about' && (
+                            <div class="max-w-4xl mx-auto space-y-8 py-4">
+                                
+                                {/* Hero Introduction */}
+                                <div class="bg-gradient-to-br from-violet-900 via-slate-900 to-indigo-950 text-white rounded-3xl p-8 shadow-xl relative overflow-hidden">
+                                    <div class="relative z-10 max-w-xl">
+                                        <span class="text-[10px] font-bold tracking-widest text-violet-300 uppercase bg-violet-500/20 px-3 py-1 rounded-full">
+                                            Open-source Logistics Exchange
+                                        </span>
+                                        <h2 class="text-2xl font-black mt-3 leading-tight">Texora Fabric Exchange</h2>
+                                        <p class="text-sm text-violet-200 mt-2 leading-relaxed">
+                                            The leading open-source textile exchange enabling dynamic wholesale trading, distance verification, and direct-to-loom negotiations for Indian manufacturers.
+                                        </p>
+                                    </div>
+                                    <div class="absolute right-0 bottom-0 translate-x-20 translate-y-20 w-80 h-80 bg-violet-500/10 rounded-full blur-2xl"></div>
+                                </div>
+
+                                {/* Mathematical Costing Model Explanation */}
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div class="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm">
+                                        <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider mb-4 flex items-center gap-2">
+                                            <i class="fa-solid fa-calculator text-violet-500"></i>
+                                            <span>Dynamic Landed Cost Equation</span>
+                                        </h3>
+                                        <p class="text-xs text-slate-500 leading-relaxed mb-4">
+                                            Our smart logistics layer automatically factors in truck transport freights from the production loom direct to your warehouse. By processing the Earth's radius, we prevent misleading ex-factory rates from masking heavy transport cost overlays.
+                                        </p>
+                                        <div class="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                                            <p class="text-xs text-slate-400 font-bold mb-1">THE SYSTEM FORMULA</p>
+                                            <p class="text-sm font-black text-violet-600 font-mono">
+                                                Landed Price = Ex-Factory Rate + (Distance in km &times; Surcharge per meter)
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div class="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm">
+                                        <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider mb-4 flex items-center gap-2">
+                                            <i class="fa-solid fa-circle-check text-emerald-500"></i>
+                                            <span>Platform Trading Guidelines</span>
+                                        </h3>
+                                        <ul class="space-y-3.5 text-xs text-slate-600">
+                                            <li class="flex items-start gap-2">
+                                                <span class="bg-emerald-50 text-emerald-600 w-5 h-5 rounded-full flex items-center justify-center shrink-0 font-bold text-[10px]">1</span>
+                                                <span>Add and verify custom location coordinates in the <strong>Account</strong> page to optimize geographic sorting.</span>
+                                            </li>
+                                            <li class="flex items-start gap-2">
+                                                <span class="bg-emerald-50 text-emerald-600 w-5 h-5 rounded-full flex items-center justify-center shrink-0 font-bold text-[10px]">2</span>
+                                                <span>Initiate discussions via "Message Seller" to discuss volume tier rebates (typically over 1,000 meters).</span>
+                                            </li>
+                                            <li class="flex items-start gap-2">
+                                                <span class="bg-emerald-50 text-emerald-600 w-5 h-5 rounded-full flex items-center justify-center shrink-0 font-bold text-[10px]">3</span>
+                                                <span>Post deadstock surplus materials easily to avoid factory warehousing storage over-expenditures.</span>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                {/* Platform Makers Info */}
+                                <div class="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm text-center">
+                                    
+                                    <h3 class="text-xs font-bold text-slate-800 uppercase tracking-widest mb-2">Designed and Maintained By</h3>
+                                    <p class="text-xs text-slate-500 max-w-md mx-auto">
+                                        This platform was designed and developed as a collaborative project by a
+                                        passionate team of developers dedicated to modernizing textile trade through
+                                        innovative technology. Our goal is to provide a seamless, secure, and
+                                        efficient marketplace that connects manufacturers and traders.
+                                    
+
+                                        <h3>Development Team</h3>
+
+                                        <ul>
+                                            <li>Tank Prince</li>
+                                            <li>Chauhan Divyesh</li>
+                                            <li>Khara Gautam</li>
+                                            <li>Shingrakhiya Dax</li>
+                                        </ul>
+
+                                    </p>
+                                    <div class="flex items-center justify-center gap-4 mt-4 text-slate-400 text-xs font-bold">
+                                        <span>Surat Headquarters</span>
+                                        <span>&bull;</span>
+                                        <span>2026 Textile Tech Guild</span>
+                                        <span>&bull;</span>
+                                        <span>Sourcing Network</span>
+                                    </div>
+                                </div>
+
+                            </div>
+                        )}
+
+                    </main>
+
+                    {/* FLOATING NAVIGATION BAR DOCKED AT THE BOTTOM */}
+                    <nav class="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-[95%] max-w-lg bg-white/20 backdrop-blur-xl rounded-2xl border border-white/30 shadow-2xl px-3 py-2 flex items-center justify-around ring-1 ring-white/10">
                         
-                        <div class="p-6 space-y-6">
-                            <div class="grid grid-cols-2 gap-6">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
-                                    <input type="text" id="accName" class="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-brand-500 outline-none">
+                        {/* Navigation Tab: Marketplace */}
+                        <button 
+                            onClick={() => setCurrentPage('marketplace')}
+                            class={`flex flex-col items-center gap-1.5 py-1 px-3.5 rounded-xl transition-all ${
+                                currentPage === 'marketplace' 
+                                ? 'text-violet-700 bg-white/40 scale-105 shadow-sm font-bold' 
+                                : 'text-slate-700 hover:text-slate-950 font-semibold'
+                            }`}
+                        >
+                            <i class="fa-solid fa-store text-lg"></i>
+                            <span class="text-[9px]">Marketplace</span>
+                        </button>
+
+                        {/* Navigation Tab: My Product */}
+                        <button 
+                            onClick={() => setCurrentPage('my-products')}
+                            class={`flex flex-col items-center gap-1.5 py-1 px-3.5 rounded-xl transition-all ${
+                                currentPage === 'my-products' 
+                                ? 'text-violet-700 bg-white/40 scale-105 shadow-sm font-bold' 
+                                : 'text-slate-700 hover:text-slate-950 font-semibold'
+                            }`}
+                        >
+                            <i class="fa-solid fa-cubes text-lg"></i>
+                            <span class="text-[9px]">My Product</span>
+                        </button>
+
+                        {/* Navigation Tab: Chat */}
+                        <button 
+                            onClick={() => {
+                                if (!user) {
+                                    setPendingAction({ type: 'navigate', page: 'chat' });
+                                    setLoginMessage("Please sign in to access your secure chat negotiation channels.");
+                                    setLoginModalOpen(true);
+                                } else {
+                                    setCurrentPage('chat');
+                                }
+                            }}
+                            class={`flex flex-col items-center gap-1.5 py-1 px-3.5 rounded-xl transition-all relative ${
+                                currentPage === 'chat' 
+                                ? 'text-violet-700 bg-white/40 scale-105 shadow-sm font-bold' 
+                                : 'text-slate-700 hover:text-slate-950 font-semibold'
+                            }`}
+                        >
+                            <i class="fa-solid fa-comments text-lg"></i>
+                            <span class="text-[9px]">Chat</span>
+                            {user && (
+                                <span class="absolute top-1.5 right-4 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white"></span>
+                            )}
+                        </button>
+
+                        {/* Navigation Tab: Account */}
+                        <button 
+                            onClick={() => setCurrentPage('account')}
+                            class={`flex flex-col items-center gap-1.5 py-1 px-3.5 rounded-xl transition-all ${
+                                currentPage === 'account' 
+                                ? 'text-violet-700 bg-white/40 scale-105 shadow-sm font-bold' 
+                                : 'text-slate-700 hover:text-slate-950 font-semibold'
+                            }`}
+                        >
+                            <i class="fa-solid fa-sliders text-lg"></i>
+                            <span class="text-[9px]">Account</span>
+                        </button>
+
+                        {/* Navigation Tab: About */}
+                        <button 
+                            onClick={() => setCurrentPage('about')}
+                            class={`flex flex-col items-center gap-1.5 py-1 px-3.5 rounded-xl transition-all ${
+                                currentPage === 'about' 
+                                ? 'text-violet-700 bg-white/40 scale-105 shadow-sm font-bold' 
+                                : 'text-slate-700 hover:text-slate-950 font-semibold'
+                            }`}
+                        >
+                            <i class="fa-solid fa-circle-info text-lg"></i>
+                            <span class="text-[9px]">About</span>
+                        </button>
+
+                    </nav>
+
+                    {/* DYNAMIC MODAL: LOGIN / SIGNUP POPUP */}
+                    {loginModalOpen && (
+                        <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm transition-all animate-fade-in">
+                            <div class="bg-white w-full max-w-md rounded-3xl border border-slate-100 shadow-2xl p-6 relative overflow-hidden">
+                                
+                                {/* Close button */}
+                                <button 
+                                    onClick={() => { setLoginModalOpen(false); setPendingAction(null); }}
+                                    class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-2"
+                                >
+                                    <i class="fa-solid fa-xmark text-lg"></i>
+                                </button>
+
+                                {/* Icon banner */}
+                                <div class="flex items-center gap-3.5 pb-4 mb-4 border-b">
+                                    <div class="w-10 h-10 bg-violet-50 text-violet-600 rounded-xl flex items-center justify-center">
+                                        <i class="fa-solid fa-lock"></i>
+                                    </div>
+                                    <div>
+                                        <h3 class="text-xs font-bold uppercase text-slate-400 tracking-widest">Authentication Hub</h3>
+                                        <h2 class="text-sm font-extrabold text-slate-800">Texora Trader Access</h2>
+                                    </div>
                                 </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Business Name</label>
-                                    <input type="text" id="accBusiness" class="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-brand-500 outline-none">
+
+                                {/* Custom prompt action messages */}
+                                {loginMessage && (
+                                    <div class="mb-4 p-3 bg-amber-50 text-amber-700 rounded-xl text-xs font-semibold flex items-center gap-2 border border-amber-100">
+                                        <i class="fa-solid fa-circle-exclamation text-xs"></i>
+                                        <span>{loginMessage}</span>
+                                    </div>
+                                )}
+
+                                {/* Authentication choice tabs */}
+                                <div class="grid grid-cols-2 gap-2 mb-6">
+                                    <button
+                                        type="button"
+                                        onClick={() => setAuthTab('login')}
+                                        class={`py-2 rounded-xl text-xs font-bold transition-all ${authTab === 'login' ? 'bg-violet-600 text-white' : 'bg-slate-50 text-slate-500'}`}
+                                    >
+                                        Log In
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setAuthTab('signup')}
+                                        class={`py-2 rounded-xl text-xs font-bold transition-all ${authTab === 'signup' ? 'bg-violet-600 text-white' : 'bg-slate-50 text-slate-500'}`}
+                                    >
+                                        Register Mill
+                                    </button>
                                 </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Location</label>
-                                    <input type="text" id="accLocation" class="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-brand-500 outline-none">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Business Type</label>
-                                    <select id="accType" class="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-brand-500 outline-none">
-                                        <option>Manufacturer</option>
-                                        <option>Trader / Wholesaler</option>
-                                        <option>Retailer</option>
-                                    </select>
-                                </div>
-                            </div>
-                            
-                            <div class="pt-4 flex justify-end">
-                                <button onclick="saveProfile()" class="bg-brand-600 text-white px-6 py-2 rounded-lg hover:bg-brand-700 transition font-medium">Save Changes</button>
+
+                                {/* Submit Form */}
+                                <form onSubmit={handleLoginSubmit} class="space-y-4">
+                                    <div>
+                                        <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                                            {authTab === 'login' ? 'Username or Email' : 'Business Owner Name *'}
+                                        </label>
+                                        <input
+                                            type="text"
+                                            placeholder="e.g. Rahul Patel"
+                                            class="w-full text-xs font-medium p-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-violet-500 rounded-lg outline-none"
+                                            value={usernameInput}
+                                            onChange={(e) => setUsernameInput(e.target.value)}
+                                            required
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Secure Password *</label>
+                                        <input
+                                            type="password"
+                                            placeholder="••••••••"
+                                            class="w-full text-xs font-medium p-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-violet-500 rounded-lg outline-none"
+                                            value={passwordInput}
+                                            onChange={(e) => setPasswordInput(e.target.value)}
+                                            required
+                                        />
+                                    </div>
+
+                                    {/* Additional fields for signing up */}
+                                    {authTab === 'signup' && (
+                                        <div>
+                                            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Sourcing Hub City *</label>
+                                            <select
+                                                class="w-full text-xs font-medium p-2.5 bg-slate-50 border border-slate-200 rounded-lg cursor-pointer animate-fade-in"
+                                                value={signupCity}
+                                                onChange={(e) => setSignupCity(e.target.value)}
+                                            >
+                                                {Object.keys(hubs).map(c => (
+                                                    <option key={c} value={c}>{c}</option>
+                                                ))}
+                                            </select>
+                                            <p class="text-[9px] text-slate-400 mt-1">This defines your coordinate origin for logistics calculation lines.</p>
+                                        </div>
+                                    )}
+
+                                    {/* Action Footers */}
+                                    <div class="pt-4 flex items-center justify-between border-t border-slate-100">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setUsernameInput("Kunal Sharma");
+                                                setSignupCity("Surat");
+                                                triggerToast("Loaded mock credential details!", "info");
+                                            }}
+                                            class="text-[10px] font-bold text-violet-600 hover:underline"
+                                        >
+                                            Autofill Credentials
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            class="bg-violet-600 hover:bg-violet-700 text-white font-bold text-xs py-2 px-5 rounded-xl shadow-md transition-all"
+                                        >
+                                            {authTab === 'login' ? 'Confirm Sign In' : 'Generate Profile'}
+                                        </button>
+                                    </div>
+                                </form>
                             </div>
                         </div>
-                    </div>
+                    )}
+
                 </div>
-            </div>
-
-            <!-- 5. ABOUT VIEW -->
-            <div id="view-about" class="absolute inset-0 overflow-y-auto p-6 fade-in hidden">
-                <div class="max-w-2xl mx-auto bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center mt-10">
-                    <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-brand-100 text-brand-600 mb-4">
-                        <i class="ph-fill ph-code text-3xl"></i>
-                    </div>
-                    <h1 class="text-3xl font-bold text-gray-900 mb-2">TextileTrade</h1>
-                    <p class="text-gray-500 mb-8">Version 1.0.0 Prototype</p>
-                    
-                    <div class="text-left bg-gray-50 p-6 rounded-lg border border-gray-100">
-                        <h3 class="font-bold text-gray-800 mb-3 text-lg">About the Developer</h3>
-                        <p class="text-gray-600 mb-4">
-                            This platform was developed as a concept application for a specialized marketplace connecting textile manufacturers and traders. 
-                        </p>
-                        <ul class="space-y-2 text-sm text-gray-600">
-                            <li class="flex items-center gap-2"><i class="ph-fill ph-check-circle text-green-500"></i> Pure HTML, CSS (Tailwind), and Vanilla JavaScript</li>
-                            <li class="flex items-center gap-2"><i class="ph-fill ph-check-circle text-green-500"></i> Responsive Single Page Application architecture</li>
-                            <li class="flex items-center gap-2"><i class="ph-fill ph-check-circle text-green-500"></i> Local Storage for data persistence simulation</li>
-                        </ul>
-                    </div>
-                    
-                    <div class="mt-8 text-sm text-gray-400">
-                        &copy; 2026 TextileTrade App. All rights reserved.
-                    </div>
-                </div>
-            </div>
-
-        </div>
-    </main>
-
-    <!-- JAVASCRIPT LOGIC -->
-    <script>
-        // --- DATA & STATE MANAGEMENT ---
-        
-        // Default Mock Marketplace Data (Pre-populated)
-        const mockGlobalProducts = [
-            { id: 'p1', title: 'Premium Cotton Yarn 40s', price: 210, category: 'Yarn', location: 'Surat, India', distance: 15, seller: 'Surat Spinners', img: 'https://images.unsplash.com/photo-1605371804245-562723ec7b25?auto=format&fit=crop&q=80&w=300&h=200' },
-            { id: 'p2', title: 'Raw Silk Fabric (Unbleached)', price: 1200, category: 'Raw Fabric', location: 'Bengaluru, India', distance: 950, seller: 'SilkRoute Trads', img: 'https://images.unsplash.com/photo-1584483738018-9366e6c8e3cc?auto=format&fit=crop&q=80&w=300&h=200' },
-            { id: 'p3', title: 'Polyester Staple Fiber', price: 95, category: 'Yarn', location: 'Ahmedabad, India', distance: 260, seller: 'MegaSynthetics', img: 'https://images.unsplash.com/photo-1560706240-84a1e94441ff?auto=format&fit=crop&q=80&w=300&h=200' },
-            { id: 'p4', title: 'Denim Rolls (12oz)', price: 180, category: 'Raw Fabric', location: 'Bhilwara, India', distance: 480, seller: 'Rajasthan Denims', img: 'https://images.unsplash.com/photo-1542272201-b1ca555f8505?auto=format&fit=crop&q=80&w=300&h=200' },
-            { id: 'p5', title: 'Industrial Sewing Machine', price: 45000, category: 'Machinery', location: 'Mumbai, India', distance: 280, seller: 'TechSew Equip', img: 'https://images.unsplash.com/photo-1616423641402-999fc9640fc2?auto=format&fit=crop&q=80&w=300&h=200' },
-            { id: 'p6', title: 'Linen Fabric (100% Pure)', price: 450, category: 'Raw Fabric', location: 'Kolkata, India', distance: 1600, seller: 'Eastern Textiles', img: 'https://images.unsplash.com/photo-1598466858169-18306ee14d86?auto=format&fit=crop&q=80&w=300&h=200' },
-            { id: 'p7', title: 'Dyed Cotton Threads', price: 150, category: 'Yarn', location: 'Surat, India', distance: 5, seller: 'Vibrant Colors Ltd', img: 'https://images.unsplash.com/photo-1528698827591-e19ccd7bc23d?auto=format&fit=crop&q=80&w=300&h=200' },
-        ];
-
-        // Default Mock Chats
-        const mockChats = [
-            { id: 'c1', name: 'Aditya Patel', initial: 'AP', lastMsg: 'Is the price negotiable for bulk?', time: '10:42 AM', unread: 2, active: true },
-            { id: 'c2', name: 'Surat Spinners', initial: 'SS', lastMsg: 'We can ship by tomorrow.', time: 'Yesterday', unread: 0, active: false },
-            { id: 'c3', name: 'Rajesh (SilkRoute)', initial: 'RS', lastMsg: 'Thanks for the sample.', time: 'Mon', unread: 0, active: false }
-        ];
-
-        const mockMessages = [
-            { sender: 'them', text: 'Hello, I saw your listing for Cotton Yarn.' },
-            { sender: 'me', text: 'Hi Aditya, yes it is still available. How much quantity do you need?' },
-            { sender: 'them', text: 'I am looking for around 500 kgs to start.' },
-            { sender: 'them', text: 'Is the price negotiable for bulk?' }
-        ];
-
-        // App State
-        let userProfile = JSON.parse(localStorage.getItem('tt_profile')) || null;
-        let myProducts = JSON.parse(localStorage.getItem('tt_my_products')) || [];
-
-        // --- INITIALIZATION ---
-        function initApp() {
-            if (!userProfile) {
-                // Show Setup Wizard
-                document.getElementById('setupWizard').classList.remove('hidden');
-            } else {
-                updateUIWithProfile();
-                renderMarketplace();
-                renderMyProducts();
-                renderChats();
-                
-                // Add search listener
-                document.getElementById('globalSearch').addEventListener('input', (e) => {
-                    renderMarketplace(e.target.value);
-                });
-            }
+            );
         }
 
-        // --- WIZARD LOGIC ---
-        function nextStep() {
-            const name = document.getElementById('setupName').value;
-            const business = document.getElementById('setupBusiness').value;
-            const loc = document.getElementById('setupLocation').value;
-            
-            if(!name || !business || !loc) {
-                alert("Please fill all fields.");
-                return;
-            }
-            
-            document.getElementById('step1').classList.add('hidden');
-            document.getElementById('step2').classList.remove('hidden');
-        }
-
-        function prevStep() {
-            document.getElementById('step2').classList.add('hidden');
-            document.getElementById('step1').classList.remove('hidden');
-        }
-
-        function completeSetup() {
-            const title = document.getElementById('setupProdTitle').value;
-            const price = document.getElementById('setupProdPrice').value;
-            
-            if(!title || !price) {
-                alert("Please add a title and price for your product.");
-                return;
-            }
-
-            // Save Profile
-            userProfile = {
-                name: document.getElementById('setupName').value,
-                business: document.getElementById('setupBusiness').value,
-                location: document.getElementById('setupLocation').value,
-                type: document.getElementById('setupType').value
-            };
-            localStorage.setItem('tt_profile', JSON.stringify(userProfile));
-
-            // Save First Product
-            const newProduct = {
-                id: 'my_' + Date.now(),
-                title: title,
-                price: parseFloat(price),
-                category: document.getElementById('setupProdCat').value,
-                desc: document.getElementById('setupProdDesc').value,
-                date: new Date().toLocaleDateString()
-            };
-            myProducts.push(newProduct);
-            localStorage.setItem('tt_my_products', JSON.stringify(myProducts));
-
-            document.getElementById('setupWizard').classList.add('hidden');
-            initApp();
-        }
-
-        // --- UI UPDATES ---
-        function updateUIWithProfile() {
-            if(!userProfile) return;
-            // Header
-            document.getElementById('headerName').innerText = userProfile.name;
-            document.getElementById('headerBusiness').innerText = userProfile.business;
-            document.getElementById('headerLocation').innerText = userProfile.location;
-            document.getElementById('headerInitial').innerText = userProfile.name.charAt(0).toUpperCase();
-
-            // Account Form
-            document.getElementById('accName').value = userProfile.name;
-            document.getElementById('accBusiness').value = userProfile.business;
-            document.getElementById('accLocation').value = userProfile.location;
-            document.getElementById('accType').value = userProfile.type;
-            
-            document.getElementById('accountNameTitle').innerText = userProfile.name;
-            document.getElementById('accountBusinessTitle').innerText = userProfile.business;
-            document.getElementById('accountInitial').innerText = userProfile.name.charAt(0).toUpperCase();
-        }
-
-        function saveProfile() {
-            userProfile = {
-                name: document.getElementById('accName').value,
-                business: document.getElementById('accBusiness').value,
-                location: document.getElementById('accLocation').value,
-                type: document.getElementById('accType').value
-            };
-            localStorage.setItem('tt_profile', JSON.stringify(userProfile));
-            updateUIWithProfile();
-            
-            // Show toast (simplified alert)
-            const btn = event.target;
-            const ogText = btn.innerText;
-            btn.innerText = "Saved!";
-            btn.classList.add("bg-green-600");
-            setTimeout(() => {
-                btn.innerText = ogText;
-                btn.classList.remove("bg-green-600");
-            }, 2000);
-        }
-
-        // --- NAVIGATION ---
-        function navigate(viewId) {
-            // Update nav styles
-            document.querySelectorAll('nav button').forEach(btn => {
-                btn.classList.remove('nav-active');
-            });
-            document.getElementById(`nav-${viewId}`).classList.add('nav-active');
-
-            // Hide all views
-            const views = ['marketplace', 'products', 'chat', 'account', 'about'];
-            views.forEach(v => {
-                document.getElementById(`view-${v}`).classList.add('hidden');
-                document.getElementById(`view-${v}`).classList.remove('block');
-            });
-
-            // Show target view
-            document.getElementById(`view-${viewId}`).classList.remove('hidden');
-            document.getElementById(`view-${viewId}`).classList.add('block');
-        }
-
-        // --- MARKETPLACE LOGIC ---
-        function renderMarketplace(searchQuery = '') {
-            const grid = document.getElementById('marketplaceGrid');
-            const sortMode = document.getElementById('marketSort').value;
-            
-            // Combine mock data + user products into the pool
-            let allProducts = [...mockGlobalProducts];
-            
-            // Add user's products (distance 0)
-            myProducts.forEach(p => {
-                allProducts.push({
-                    id: p.id,
-                    title: p.title,
-                    price: p.price,
-                    category: p.category,
-                    location: userProfile.location,
-                    distance: 0,
-                    seller: userProfile.business + ' (You)',
-                    img: 'https://images.unsplash.com/photo-1544253342-6323c2a04eb9?auto=format&fit=crop&q=80&w=300&h=200' // Generic placeholder
-                });
-            });
-
-            // Filter by search
-            if (searchQuery) {
-                const q = searchQuery.toLowerCase();
-                allProducts = allProducts.filter(p => 
-                    p.title.toLowerCase().includes(q) || 
-                    p.category.toLowerCase().includes(q) || 
-                    p.seller.toLowerCase().includes(q)
-                );
-            }
-
-            // Sort
-            if (sortMode === 'distance') {
-                allProducts.sort((a, b) => a.distance - b.distance);
-            } else if (sortMode === 'price-low') {
-                allProducts.sort((a, b) => a.price - b.price);
-            } else if (sortMode === 'price-high') {
-                allProducts.sort((a, b) => b.price - a.price);
-            }
-
-            // Render
-            grid.innerHTML = '';
-            if(allProducts.length === 0) {
-                grid.innerHTML = `<div class="col-span-full text-center py-10 text-gray-500">No products found matching your search.</div>`;
-                return;
-            }
-
-            allProducts.forEach(p => {
-                const isMine = p.distance === 0;
-                const card = `
-                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition group">
-                        <div class="h-40 bg-gray-200 relative overflow-hidden">
-                            <img src="${p.img}" alt="${p.title}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
-                            <div class="absolute top-2 right-2 bg-white/90 backdrop-blur px-2 py-1 rounded text-xs font-bold text-gray-800 shadow-sm">
-                                ${p.category}
-                            </div>
-                        </div>
-                        <div class="p-4">
-                            <h3 class="font-bold text-gray-900 text-lg truncate" title="${p.title}">${p.title}</h3>
-                            <p class="text-brand-600 font-bold text-lg mt-1">₹${p.price} <span class="text-xs text-gray-500 font-normal">/ unit</span></p>
-                            
-                            <div class="mt-4 flex flex-col gap-1">
-                                <div class="flex items-center gap-2 text-sm text-gray-600">
-                                    <i class="ph ph-storefront"></i>
-                                    <span class="truncate">${p.seller}</span>
-                                </div>
-                                <div class="flex items-center gap-2 text-sm text-gray-500">
-                                    <i class="ph ph-map-pin"></i>
-                                    <span class="truncate">${p.location} (${p.distance === 0 ? 'Local' : p.distance + ' km'})</span>
-                                </div>
-                            </div>
-                            
-                            <button class="mt-4 w-full py-2 rounded-lg text-sm font-medium transition ${isMine ? 'bg-gray-100 text-gray-600 cursor-default' : 'bg-brand-50 text-brand-600 hover:bg-brand-600 hover:text-white'}" ${isMine ? 'disabled' : `onclick="openChatWith('${p.seller}')"`}>
-                                ${isMine ? 'Your Product' : 'Message Seller'}
-                            </button>
-                        </div>
-                    </div>
-                `;
-                grid.innerHTML += card;
-            });
-        }
-
-        // --- MY PRODUCTS LOGIC ---
-        function renderMyProducts() {
-            const tbody = document.getElementById('myProductsTable');
-            tbody.innerHTML = '';
-            
-            if(myProducts.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="4" class="px-6 py-8 text-center text-gray-500">You haven't listed any products yet.</td></tr>`;
-                return;
-            }
-
-            myProducts.forEach(p => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="flex items-center">
-                            <div class="h-10 w-10 flex-shrink-0 bg-gray-100 rounded-lg flex items-center justify-center">
-                                <i class="ph ph-package text-gray-400 text-xl"></i>
-                            </div>
-                            <div class="ml-4">
-                                <div class="text-sm font-medium text-gray-900">${p.title}</div>
-                                <div class="text-sm text-gray-500">Listed: ${p.date}</div>
-                            </div>
-                        </div>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-brand-100 text-brand-800">
-                            ${p.category}
-                        </span>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
-                        ₹${p.price}
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button class="text-brand-600 hover:text-brand-900 mr-3">Edit</button>
-                        <button onclick="deleteProduct('${p.id}')" class="text-red-600 hover:text-red-900">Delete</button>
-                    </td>
-                `;
-                tbody.appendChild(tr);
-            });
-        }
-
-        function deleteProduct(id) {
-            if(confirm('Are you sure you want to remove this listing?')) {
-                myProducts = myProducts.filter(p => p.id !== id);
-                localStorage.setItem('tt_my_products', JSON.stringify(myProducts));
-                renderMyProducts();
-                renderMarketplace(); // Update marketplace too
-            }
-        }
-
-        // --- CHAT LOGIC ---
-        function renderChats() {
-            const contactsDiv = document.getElementById('chatContacts');
-            const msgsDiv = document.getElementById('chatMessages');
-            
-            // Render Contacts Sidebar
-            contactsDiv.innerHTML = '';
-            mockChats.forEach(c => {
-                const activeClass = c.active ? 'bg-white border-l-4 border-brand-500 shadow-sm' : 'hover:bg-gray-100 border-l-4 border-transparent';
-                const unreadBadge = c.unread > 0 ? `<div class="h-5 w-5 rounded-full bg-brand-500 text-white text-xs flex items-center justify-center font-bold">${c.unread}</div>` : '';
-                
-                contactsDiv.innerHTML += `
-                    <div class="p-3 cursor-pointer ${activeClass} border-b border-gray-100 transition flex items-center gap-3">
-                        <div class="h-10 w-10 rounded-full bg-brand-100 text-brand-600 flex items-center justify-center font-bold flex-shrink-0">
-                            ${c.initial}
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <div class="flex justify-between items-center mb-0.5">
-                                <h4 class="text-sm font-bold text-gray-900 truncate">${c.name}</h4>
-                                <span class="text-xs text-gray-400">${c.time}</span>
-                            </div>
-                            <p class="text-xs text-gray-500 truncate ${c.unread > 0 ? 'font-semibold text-gray-800' : ''}">${c.lastMsg}</p>
-                        </div>
-                        ${unreadBadge}
-                    </div>
-                `;
-            });
-
-            // Render Messages (Mock active chat)
-            msgsDiv.innerHTML = '';
-            mockMessages.forEach(m => {
-                appendMessageToUI(m.text, m.sender);
-            });
-            scrollToBottom();
-        }
-
-        function appendMessageToUI(text, sender) {
-            const msgsDiv = document.getElementById('chatMessages');
-            const isMe = sender === 'me';
-            
-            const msgHtml = `
-                <div class="flex ${isMe ? 'justify-end' : 'justify-start'} mb-4">
-                    <div class="max-w-[70%] rounded-2xl px-4 py-2 ${isMe ? 'bg-brand-600 text-white rounded-br-none' : 'bg-white border border-gray-200 text-gray-800 rounded-bl-none shadow-sm'}">
-                        <p class="text-sm">${text}</p>
-                        <span class="text-[10px] ${isMe ? 'text-brand-200' : 'text-gray-400'} block mt-1 text-right">Just now</span>
-                    </div>
-                </div>
-            `;
-            msgsDiv.innerHTML += msgHtml;
-        }
-
-        function handleChatEnter(e) {
-            if (e.key === 'Enter') {
-                sendChatMessage();
-            }
-        }
-
-        function sendChatMessage() {
-            const input = document.getElementById('chatInputMessage');
-            const text = input.value.trim();
-            if(!text) return;
-
-            // Add to UI
-            appendMessageToUI(text, 'me');
-            input.value = '';
-            scrollToBottom();
-
-            // Simulate reply after 1.5s
-            setTimeout(() => {
-                appendMessageToUI("Thanks for the message. I'll check my inventory and get back to you shortly.", 'them');
-                scrollToBottom();
-            }, 1500);
-        }
-
-        function scrollToBottom() {
-            const msgsDiv = document.getElementById('chatMessages');
-            msgsDiv.scrollTop = msgsDiv.scrollHeight;
-        }
-
-        function openChatWith(sellerName) {
-            navigate('chat');
-            // Mock visual update for opening a new chat
-            document.getElementById('activeChatName').innerText = sellerName;
-            document.getElementById('chatMessages').innerHTML = `
-                <div class="text-center text-xs text-gray-400 my-4">Today</div>
-                <div class="flex justify-end mb-4">
-                    <div class="max-w-[70%] rounded-2xl px-4 py-2 bg-brand-600 text-white rounded-br-none">
-                        <p class="text-sm">Hi, I am interested in your product listing.</p>
-                        <span class="text-[10px] text-brand-200 block mt-1 text-right">Just now</span>
-                    </div>
-                </div>
-            `;
-        }
-
-        // --- UTILS ---
-        function resetApp() {
-            if(confirm("This will clear all your local profile and product data. Proceed?")) {
-                localStorage.removeItem('tt_profile');
-                localStorage.removeItem('tt_my_products');
-                location.reload();
-            }
-        }
-
-        // Boot
-        window.onload = initApp;
-
+        // Render React Application
+        const container = document.getElementById('root');
+        const root = ReactDOM.createRoot(container);
+        root.render(<App />);
     </script>
 </body>
 </html>
